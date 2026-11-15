@@ -24,10 +24,12 @@
   /* ---- PI preview, mimics the Excel sheet ---- */
   .pi{background:#fff;border:1px solid #999;padding:0;width:100%;font-size:12px}
   .pi{position:relative}
-  .pi .logo{position:absolute;left:6px;top:6px;width:110px;height:auto;z-index:2}
+  .pi .logo{position:absolute;right:6px;top:6px;width:110px;height:auto;z-index:2}
   .pi table{width:100%;border-collapse:collapse;table-layout:fixed}
   .pi td,.pi th{border:1px solid #000;padding:5px 6px;vertical-align:middle;word-wrap:break-word}
   .pi tr.hb td{border-top:none;border-bottom:none}
+  .pi tr.hb td[colspan="7"]{border-right:none}
+  .pi tr.hb td.gap{border-left:none}
   .pi tr.hb:first-child td{border-top:1px solid #000}
   .pi .c{text-align:center}.pi .r{text-align:right}.pi .b{font-weight:bold}
   .pi .h1{font-size:20px;font-weight:bold;text-align:center}
@@ -154,17 +156,18 @@ function buildPiWorkbook(data, ExcelJS){
   const thin={style:"thin",color:{argb:"FF000000"}};
   const all={top:thin,left:thin,bottom:thin,right:thin};
   const top={top:thin,left:thin,right:thin}, mid={left:thin,right:thin}, bot={left:thin,right:thin,bottom:thin};
+  const lt={left:thin,top:thin}, lft={left:thin}, rt={right:thin,top:thin}, rgt={right:thin};
   const F10={name:"Arial",size:10}, F10B={name:"Arial",size:10,bold:true}, F18B={name:"Arial",size:18,bold:true}, F9={name:"Arial",size:9};
   const F12B={name:"Calibri",size:12,bold:true}, F12BR={name:"Calibri",size:12,bold:true,color:{argb:"FFFF0000"}}, F12ABR={name:"Arial",size:12,bold:true,color:{argb:"FFFF0000"}};
   const CTR={horizontal:"center",vertical:"middle",wrapText:true}, LFT={horizontal:"left",vertical:"middle",wrapText:true}, RGT={horizontal:"right",vertical:"middle"};
-  try{ const logoId=wb.addImage({base64:LOGO_DATA_URI.split(",")[1], extension:"png"}); ws.addImage(logoId,{tl:{col:1,row:0}, ext:{width:110,height:103}}); }catch(e){ console.warn("logo skipped", e); }
+  try{ const logoId=wb.addImage({base64:LOGO_DATA_URI.split(",")[1], extension:"png"}); ws.addImage(logoId,{tl:{col:8,row:0}, ext:{width:110,height:103}}); }catch(e){ console.warn("logo skipped", e); }
   function merge(rng,val,font,align,border){ws.mergeCells(rng);const c=ws.getCell(rng.split(":")[0]);c.value=val;c.font=font;c.alignment=align;c.border=border;}
   function put(cell,val,font,align,border,fmt){const c=ws.getCell(cell);c.value=val;c.font=font;c.alignment=align;c.border=border;if(fmt)c.numFmt=fmt;}
   const MONEY='"$"#,##0.00';
-  ws.getRow(1).height=24; merge("B1:I1","TIANCHI TECHNOLOGY CO., LTD.",F18B,CTR,top);
-  ws.getRow(2).height=16.5; merge("B2:I2","EMAIL: KEVIN@NEOPRENECUSTOM.COM     WEB: WWW.NEOPRENECUSTOM.COM",F10,CTR,mid);
-  ws.getRow(3).height=19.5; merge("B3:I3","TEL:0734-87961816  FAX: 0734-87961819  CEL:86-13417385320",F10,CTR,mid);
-  ws.getRow(4).height=19.5; merge("B4:I4","ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA",F9,CTR,mid);
+  ws.getRow(1).height=24; merge("B1:H1","TIANCHI TECHNOLOGY CO., LTD.",F18B,CTR,lt); put("I1","",F10,CTR,rt);
+  ws.getRow(2).height=16.5; merge("B2:H2","EMAIL: KEVIN@NEOPRENECUSTOM.COM     WEB: WWW.NEOPRENECUSTOM.COM",F10,CTR,lft); put("I2","",F10,CTR,rgt);
+  ws.getRow(3).height=19.5; merge("B3:H3","TEL:0734-87961816  FAX: 0734-87961819  CEL:86-13417385320",F10,CTR,lft); put("I3","",F10,CTR,rgt);
+  ws.getRow(4).height=19.5; merge("B4:H4","ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA",F9,CTR,lft); put("I4","",F10,CTR,rgt);
   ws.getRow(5).height=26.25; merge("B5:I5","PROFORMA INVOICE",F18B,CTR,mid);
   ws.getRow(6).height=18; put("B6","TO:",F10,{vertical:"middle"},{left:thin,top:thin}); merge("C6:G6",data.to,F10,LFT,all); merge("H6:I6","TEL: "+data.tel,F10,LFT,top);
   ws.getRow(7).height=18; put("B7","ADD:",F10,{vertical:"middle"},{left:thin}); merge("C7:G7",data.addr,F10,LFT,all); merge("H7:I7","P.C.: "+data.pc,F10,LFT,mid);
@@ -206,10 +209,10 @@ function render(){
   const rows=d.products.map(p=>`<tr><td class="c">/</td><td>${esc(p.desc)}</td><td class="c">${esc(p.thick)}</td><td class="c">${esc(p.hs)}</td><td class="c">${p.qty}</td><td class="c">${money(p.unit)}</td><td class="c">${money(p.sample)}</td><td class="c">${money((p.unit+p.sample)*p.qty)}</td></tr>`).join("");
   const ex=d.extras.map(e=>`<tr><td colspan="7">${esc(e.label)}</td><td class="c">${money(e.amount)}</td></tr>`).join("");
   document.getElementById("pi_preview").innerHTML=`<img class="logo" src="${LOGO_DATA_URI}" alt="Tianchi Logo"><table>
-    <tr class="hb"><td colspan="8" class="h1">TIANCHI TECHNOLOGY CO., LTD.</td></tr>
-    <tr class="hb"><td colspan="8" class="c">EMAIL: KEVIN@NEOPRENECUSTOM.COM &nbsp;&nbsp; WEB: WWW.NEOPRENECUSTOM.COM</td></tr>
-    <tr class="hb"><td colspan="8" class="c">TEL:0734-87961816 &nbsp; FAX: 0734-87961819 &nbsp; CEL:86-13417385320</td></tr>
-    <tr class="hb"><td colspan="8" class="c" style="font-size:11px">ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA</td></tr>
+    <tr class="hb"><td colspan="7" class="h1">TIANCHI TECHNOLOGY CO., LTD.</td><td colspan="1" class="gap"></td></tr>
+    <tr class="hb"><td colspan="7" class="c">EMAIL: KEVIN@NEOPRENECUSTOM.COM &nbsp;&nbsp; WEB: WWW.NEOPRENECUSTOM.COM</td><td colspan="1" class="gap"></td></tr>
+    <tr class="hb"><td colspan="7" class="c">TEL:0734-87961816 &nbsp; FAX: 0734-87961819 &nbsp; CEL:86-13417385320</td><td colspan="1" class="gap"></td></tr>
+    <tr class="hb"><td colspan="7" class="c" style="font-size:11px">ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA</td><td colspan="1" class="gap"></td></tr>
     <tr class="hb"><td colspan="8" class="h2t">PROFORMA INVOICE</td></tr>
     <tr><td>TO:</td><td colspan="4">${esc(d.to)}</td><td colspan="3">TEL: ${esc(d.tel)}</td></tr>
     <tr><td>ADD:</td><td colspan="4">${esc(d.addr)}</td><td colspan="3">P.C.: ${esc(d.pc)}</td></tr>
@@ -281,7 +284,7 @@ function downloadWord(){
   const rows=d.products.map(p=>`<tr><td>/</td><td>${esc(p.desc)}</td><td>${esc(p.thick)}</td><td>${esc(p.hs)}</td><td>${p.qty}</td><td>${money(p.unit)}</td><td>${money(p.sample)}</td><td>${money((p.unit+p.sample)*p.qty)}</td></tr>`).join("");
   const ex=d.extras.map(e=>`<tr><td colspan="7">${esc(e.label)}</td><td>${money(e.amount)}</td></tr>`).join("");
   const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Proforma Invoice</title></head><body style="font-family:Arial">
-  <table border="0" cellspacing="0" cellpadding="0" width="100%"><tr><td width="120" valign="top"><img src="${LOGO_DATA_URI}" width="110"></td><td style="text-align:center"><h1 style="text-align:center;margin:0">TIANCHI TECHNOLOGY CO., LTD.</h1><p style="text-align:center">EMAIL: KEVIN@NEOPRENECUSTOM.COM &nbsp; WEB: WWW.NEOPRENECUSTOM.COM<br>TEL:0734-87961816 &nbsp; FAX: 0734-87961819 &nbsp; CEL:86-13417385320<br>ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA</p></td></tr></table>
+  <table border="0" cellspacing="0" cellpadding="0" width="100%"><tr><td style="text-align:center"><h1 style="text-align:center;margin:0">TIANCHI TECHNOLOGY CO., LTD.</h1><p style="text-align:center">EMAIL: KEVIN@NEOPRENECUSTOM.COM &nbsp; WEB: WWW.NEOPRENECUSTOM.COM<br>TEL:0734-87961816 &nbsp; FAX: 0734-87961819 &nbsp; CEL:86-13417385320<br>ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA</p></td><td width="120" valign="top" align="right"><img src="${LOGO_DATA_URI}" width="110"></td></tr></table>
   <h2 style="text-align:center">PROFORMA INVOICE</h2>
   <p>TO: ${esc(d.to)} &nbsp; TEL: ${esc(d.tel)}<br>ADD: ${esc(d.addr)} &nbsp; P.C.: ${esc(d.pc)}<br>ATTN: ${esc(d.attn)}</p>
   <p>FM: TIANCHI TECHNOLOGY CO., LTD. &nbsp; REF NO.:${esc(d.ref)}<br>ATTN: KEVIN &nbsp; DATE:${esc(dateStr(d.date))}</p>
