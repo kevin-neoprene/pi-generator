@@ -35,6 +35,9 @@
   .pi tr.hb td{border-top:none;border-bottom:none}
   .pi tr.hb td[colspan="7"]{border-right:none}
   .pi tr.hb td.gap{border-left:none}
+  .pi .logo.left{left:6px;right:auto}
+  .pi tr.hb td.pl-txt{border-left:none}
+  .pi tr.hb td.pl-logo-col{border-right:none}
   .pi tr.hb:first-child td{border-top:1px solid #000}
   .pi .c{text-align:center}.pi .r{text-align:right}.pi .b{font-weight:bold}
   .pi .h1{font-size:20px;font-weight:bold;text-align:center}
@@ -70,6 +73,7 @@
       <button type="button" onclick="loadSample('KAT')">KAT Europe（英国）</button>
       <button type="button" onclick="loadSample('AYNES')">Marta Aynes（西班牙 · CI）</button>
       <button type="button" onclick="loadSample('Sam')">Sam Soni（阿联酋 · CI）</button>
+      <button type="button" onclick="loadSample('Colonial')">Colonial（澳洲 · 装箱单）</button>
       <button type="button" onclick="resetForm()">清空新建</button>
     </div>
 
@@ -85,10 +89,10 @@
     </div>
 
     <h2>产品明细 <button type="button" class="btn ghost" style="padding:4px 10px;margin:0" onclick="addProductRow()">+ 加一行</button></h2>
-    <table class="edit"><thead><tr><th style="width:30%">产品描述</th><th class="inv">厚度</th><th class="inv">HS CODE</th><th>数量</th><th class="price">单价</th><th class="price">样品费/个</th><th class="pk">箱数</th><th class="pk">净重 KG</th><th class="pk">毛重 KG</th><th class="pk">尺寸 CM</th><th class="subtotal">小计</th><th></th></tr></thead>
+    <table class="edit"><thead><tr><th style="width:30%">产品描述</th><th class="inv">厚度</th><th>HS CODE</th><th id="th_qty">数量</th><th class="price">单价</th><th class="price">样品费/个</th><th class="pk">每箱净重 KG</th><th class="pk">每箱毛重 KG</th><th class="pk">尺寸 CM</th><th class="pk">箱数</th><th class="subtotal">小计</th><th></th></tr></thead>
     <tbody id="prod_body"></tbody></table>
     <p class="note" id="note_money">小计公式和你原来的一致：<b>小计 =（单价 + 样品费）× 数量</b>。样品单：单价填 0、样品费填每件的费用；大货单：单价填单价、样品费填 0。原来 4 份 PI 里这个公式写得不统一（有的按整行、有的按每件），但按“每件”算，4 份的合计都能对上。</p>
-    <p class="note" id="note_pl" style="display:none">装箱单按每行填箱数、净重、毛重、尺寸，件数、箱数和重量合计会自动算。尺寸例如：60x40x40CM。</p>
+    <p class="note" id="note_pl" style="display:none">装箱单按每箱填：每箱件数、每箱净重 / 毛重、纸箱尺寸、箱数；总件数、总毛重、总体积会自动算（体积 = 长×宽×高×箱数，尺寸例如 49.5*45.5*43）。</p>
 
     <div id="sec_extras">
     <h2>附加行（运费 / 折扣等） <button type="button" class="btn ghost" style="padding:4px 10px;margin:0" onclick="addExtraRow()">+ 加一行</button></h2>
@@ -162,7 +166,10 @@ const SAMPLES = {
     extras:[{label:"Shipping Cost to Spain",amount:55}], note:"Made in China.", remarks:"", lead:"7-9 DAYS AFTER CONFIRMING THE ORDER.", term:"EXW", bank:"HK"},
   Sam: {to:"Sam Soni", tel:"+971 58 538 4389", addr:"Rihan Heights B-103, Zayed Sports City, Abu Dhabi, UAE", pc:"", attn:"Sam Soni", date:"2026-09-28", ref:"Kevin260928", unit:"USD/PC", docType:"CI",
     products:[{desc:"Sample of Neoprene Bottle Sleeve (For Testing Only, No Commercial Value)",thick:"4mm",hs:"4016.9990.90",qty:2,unit:0,sample:5,cartons:1,nw:0.2,gw:0.5,dims:"30x20x15CM"}],
-    extras:[], note:"Free sample set for quality testing purpose only. No commercial value. Value for customs inspection only.", remarks:"", lead:"7-9 DAYS AFTER CONFIRMING THE ORDER.", term:"EXW", bank:"HK"}
+    extras:[], note:"Free sample set for quality testing purpose only. No commercial value. Value for customs inspection only.", remarks:"", lead:"7-9 DAYS AFTER CONFIRMING THE ORDER.", term:"EXW", bank:"HK"},
+  Colonial: {to:"Colonial Brands", tel:"+61 8 9242 3322", addr:"Unit 2, 55 Howe Street, Osborne Park, Western Australia, 6017", pc:"6017", attn:"Adam Plowman", date:"2026-03-16", ref:"Kevin260316", unit:"USD/PC", docType:"PL",
+    products:[{desc:"Neoprene Panel",thick:"",hs:"39269090",qty:500,unit:0,sample:0,cartons:40,nw:14,gw:14.5,dims:"49.5*45.5*43"},{desc:"Neoprene Base",thick:"",hs:"39269090",qty:4000,unit:0,sample:0,cartons:5,nw:13.5,gw:14,dims:"41*60*41"}],
+    extras:[], note:"", remarks:"", lead:"7-9 DAYS AFTER CONFIRMING THE ORDER.", term:"EXW", bank:"HK"}
 };
 function ordinal(n){return n===1?"1ST":n===2?"2ND":n===3?"3RD":n+"TH";}
 function dateStr(iso){const d=new Date(iso+"T00:00:00");const M=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];return ordinal(d.getDate())+","+M[d.getMonth()]+","+d.getFullYear();}
@@ -170,7 +177,8 @@ function refFromDate(iso){const d=new Date(iso+"T00:00:00");return "Kevin"+Strin
 function calcTotal(data){let t=0;data.products.forEach(p=>{t+=((+p.unit||0)+(+p.sample||0))*(+p.qty||0);});(data.extras||[]).forEach(e=>{t+=(+e.amount||0);});return Math.round(t*100)/100;}
 function money(n){return "$"+Number(n||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});}
 function docTitle(dt){return dt==="CI"?"COMMERCIAL INVOICE":dt==="PL"?"PACKING LIST":"PROFORMA INVOICE";}
-function calcPacking(data){let q=0,c=0,nw=0,gw=0;data.products.forEach(p=>{q+=(+p.qty||0);c+=(+p.cartons||0);nw+=(+p.nw||0);gw+=(+p.gw||0);});return{qty:q,ctn:c,nw:Math.round(nw*100)/100,gw:Math.round(gw*100)/100};}
+function parseDims(s){const m=String(s||"").replace(/cm/gi,"").split(/[*x×X]/).map(v=>parseFloat(v.trim())).filter(v=>!isNaN(v));return m.length>=3?{l:m[0],w:m[1],h:m[2]}:null;}
+function calcPacking(data){let q=0,c=0,nw=0,gw=0,vol=0;data.products.forEach(p=>{const ct=+p.cartons||0;const d=parseDims(p.dims);q+=(+p.qty||0)*ct;c+=ct;nw+=(+p.nw||0)*ct;gw+=(+p.gw||0)*ct;if(d)vol+=d.l*d.w*d.h/1000000*ct;});return{qty:q,ctn:c,nw:Math.round(nw*100)/100,gw:Math.round(gw*100)/100,vol:Math.round(vol*1000)/1000};}
 function bankText(data,total){return data.bankText+"\nNote: Please instruct your bank that ALL bank charges (including transfer and intermediate bank fees) are to be paid by the buyer (OUR rate/all fees on buyer's account). The net amount received must be $"+(Math.round(total*100)/100)+" USD.";}
 
 function buildPiWorkbook(data, ExcelJS){
@@ -183,7 +191,7 @@ function buildPiWorkbook(data, ExcelJS){
   ws.pageSetup.fitToPage=true;
   ws.pageSetup.fitToWidth=1;
   ws.pageSetup.fitToHeight=1;
-  const widths={A:5.87,B:11.12,C:21.95,D:11.51,E:16.74,F:12.62,G:10.12,H:13.12,I:20.32,J:8.99};
+  const widths=dt==="PL"?{A:21.24,B:14.62,C:9.5,D:6.99,E:6.75,F:11.87,G:5.74,H:11.12,I:9.24,J:15.37}:{A:5.87,B:11.12,C:21.95,D:11.51,E:16.74,F:12.62,G:10.12,H:13.12,I:20.32,J:8.99};
   Object.keys(widths).forEach(k=>{ws.getColumn(k).width=widths[k];});
   if(dt!=="PL"){
     if(data.products.every(p=>(+p.unit||0)===0)) ws.getColumn("G").hidden=true;
@@ -196,39 +204,68 @@ function buildPiWorkbook(data, ExcelJS){
   const F10={name:"Arial",size:10}, F10B={name:"Arial",size:10,bold:true}, F18B={name:"Arial",size:18,bold:true}, F9={name:"Arial",size:9};
   const F12B={name:"Calibri",size:12,bold:true}, F12BR={name:"Calibri",size:12,bold:true,color:{argb:"FFFF0000"}}, F12ABR={name:"Arial",size:12,bold:true,color:{argb:"FFFF0000"}};
   const CTR={horizontal:"center",vertical:"middle",wrapText:true}, LFT={horizontal:"left",vertical:"middle",wrapText:true}, RGT={horizontal:"right",vertical:"middle"};
-  try{ const logoId=wb.addImage({base64:LOGO_DATA_URI.split(",")[1], extension:"png"}); ws.addImage(logoId,{tl:{col:8,row:0}, ext:{width:110,height:103}}); }catch(e){ console.warn("logo skipped", e); }
+  try{ const logoId=wb.addImage({base64:LOGO_DATA_URI.split(",")[1], extension:"png"}); ws.addImage(logoId,{tl:{col:dt==="PL"?0:8,row:0}, ext:{width:110,height:103}}); }catch(e){ console.warn("logo skipped", e); }
   function merge(rng,val,font,align,border){ws.mergeCells(rng);const c=ws.getCell(rng.split(":")[0]);c.value=val;c.font=font;c.alignment=align;c.border=border;}
   function put(cell,val,font,align,border,fmt){const c=ws.getCell(cell);c.value=val;c.font=font;c.alignment=align;c.border=border;if(fmt)c.numFmt=fmt;}
   const MONEY='"$"#,##0.00';
   const NUM2='#,##0.00';
-  ws.getRow(1).height=24; merge("B1:H1","TIANCHI TECHNOLOGY CO., LTD.",F18B,CTR,lt); put("I1","",F10,CTR,rt);
-  ws.getRow(2).height=16.5; merge("B2:H2","EMAIL: KEVIN@NEOPRENECUSTOM.COM     WEB: WWW.NEOPRENECUSTOM.COM",F10,CTR,lft); put("I2","",F10,CTR,rgt);
-  ws.getRow(3).height=19.5; merge("B3:H3","TEL:0734-87961816  FAX: 0734-87961819  CEL:86-13417385320",F10,CTR,lft); put("I3","",F10,CTR,rgt);
-  ws.getRow(4).height=19.5; merge("B4:H4","ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA",F9,CTR,lft); put("I4","",F10,CTR,rgt);
-  ws.getRow(5).height=26.25; merge("B5:I5",title,F18B,CTR,mid);
-  ws.getRow(6).height=18; put("B6","TO:",F10,{vertical:"middle"},{left:thin,top:thin}); merge("C6:G6",data.to,F10,LFT,all); merge("H6:I6","TEL: "+data.tel,F10,LFT,top);
-  ws.getRow(7).height=18; put("B7","ADD:",F10,{vertical:"middle"},{left:thin}); merge("C7:G7",data.addr,F10,LFT,all); merge("H7:I7","P.C.: "+data.pc,F10,LFT,mid);
-  ws.getRow(8).height=18; put("B8","ATTN:",F10,{vertical:"middle"},{left:thin,bottom:thin}); merge("C8:G8",data.attn,F10,LFT,all); merge("H8:I8","",F10,LFT,bot);
-  ws.getRow(9).height=18; merge("B9:I9","",F10,LFT,mid);
-  ws.getRow(10).height=18; put("B10","FM:",F10,{vertical:"middle"},{left:thin,top:thin}); merge("C10:G10","TIANCHI TECHNOLOGY CO., LTD.",F10,LFT,top); merge("H10:I10","REF NO.:"+data.ref,F10,LFT,top);
-  ws.getRow(11).height=18; put("B11","ATTN:",F10,{vertical:"middle"},{left:thin,bottom:thin}); merge("C11:G11","KEVIN",F10,LFT,bot); merge("H11:I11","DATE:"+dateStr(data.date),F10,LFT,bot);
-  ws.getRow(12).height=30;
-  let row=13; const first=row;
+  if(dt!=="PL"){
+    ws.getRow(1).height=24; merge("B1:H1","TIANCHI TECHNOLOGY CO., LTD.",F18B,CTR,lt); put("I1","",F10,CTR,rt);
+    ws.getRow(2).height=16.5; merge("B2:H2","EMAIL: KEVIN@NEOPRENECUSTOM.COM     WEB: WWW.NEOPRENECUSTOM.COM",F10,CTR,lft); put("I2","",F10,CTR,rgt);
+    ws.getRow(3).height=19.5; merge("B3:H3","TEL:0734-87961816  FAX: 0734-87961819  CEL:86-13417385320",F10,CTR,lft); put("I3","",F10,CTR,rgt);
+    ws.getRow(4).height=19.5; merge("B4:H4","ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA",F9,CTR,lft); put("I4","",F10,CTR,rgt);
+  }
+  let row;
   if(dt==="PL"){
-    [["B12","P/N"],["C12","PRODUCT DESCRIPTION"],["D12","QUANTITY\n(PCS)"],["E12","NO. OF\nCARTONS"],["F12","NET WEIGHT\n(KGS)"],["G12","GROSS WEIGHT\n(KGS)"]].forEach(([c,v])=>put(c,v,F10B,CTR,all));
-    merge("H12:I12","DIMENSIONS(CM)",F10B,CTR,all);
+    const med={style:"medium",color:{argb:"FF000000"}};
+    const mLT={left:med,top:med}, mL={left:med}, mLB={left:med,bottom:med};
+    const mRT={right:med,top:med}, mR={right:med}, mRB={right:med,bottom:med};
+    const F20B={name:"Arial",size:20,bold:true}, F11={name:"Arial",size:11}, F11B={name:"Arial",size:11,bold:true};
+    ws.getRow(1).height=24; put("A1","",F10,CTR,mLT); merge("B1:J1","TIANCHI TECHNOLOGY CO., LTD.",F20B,CTR,{top:med,right:med});
+    ws.getRow(2).height=30; put("A2","",F10,CTR,mL); merge("B2:J2","EMAIL: KEVIN@NEOPRENECUSTOM.COM     WEB: WWW.NEOPRENECUSTOM.COM",F10,CTR,mR);
+    ws.getRow(3).height=19.5; put("A3","",F10,CTR,mL); merge("B3:J3","TEL:0734-87961816  FAX: 0734-87961819  CEL:86-13417385320",F10,CTR,mR);
+    ws.getRow(4).height=19.5; put("A4","",F10,CTR,mLB); merge("B4:J4","ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA",F9,CTR,mRB);
+    ws.getRow(5).height=19.5; merge("A5:J5","PACKING LIST",F18B,CTR,{left:med,right:med});
+    ws.getRow(6).height=18; put("A6","TO:",F11,{vertical:"middle"},{left:med,top:thin,right:thin}); merge("B6:G6",data.to,F11,LFT,{top:thin}); put("H6","",F11,LFT,{left:thin,right:thin,top:thin}); merge("I6:J6","TEL: "+data.tel,F11,LFT,{top:thin,right:med});
+    ws.getRow(7).height=18; put("A7","ADD:",F11,{vertical:"middle"},{left:med,right:thin}); merge("B7:H7",data.addr,F11,LFT,{}); merge("I7:J7","P.C.: "+data.pc,F11,LFT,{right:med});
+    ws.getRow(8).height=18; put("A8","ATTN:",F11,{vertical:"middle"},{left:med,bottom:thin,right:thin}); merge("B8:G8",data.attn,F11,LFT,{bottom:thin}); put("H8","",F11,LFT,{left:thin,right:thin,bottom:thin}); merge("I8:J8","",F11,LFT,{bottom:thin,right:med});
+    ws.getRow(9).height=18; merge("A9:J9","",F11,LFT,{left:med,right:med});
+    ws.getRow(10).height=18; put("A10","FM:",F11,{vertical:"middle"},{left:med,top:thin,right:thin}); merge("B10:G10","TIANCHI TECHNOLOGY CO., LTD.",F11,LFT,{top:thin}); put("H10","",F11,LFT,{left:thin,right:thin,top:thin}); merge("I10:J10","REF NO.:"+data.ref,F11,LFT,{top:thin,right:med});
+    ws.getRow(11).height=18; put("A11","ATTN:",F11,{vertical:"middle"},{left:med,bottom:thin,right:thin}); merge("B11:G11","KEVIN",F11,LFT,{bottom:thin}); put("H11","",F11,LFT,{left:thin,right:thin,bottom:thin}); merge("I11:J11","DATE:"+dateStr(data.date),F11,LFT,{bottom:thin,right:med});
+    ws.getRow(12).height=45;
+    const hL={left:med,right:thin,top:thin,bottom:thin}, hM={left:thin,right:thin,top:thin,bottom:thin}, hR={left:thin,right:med,top:thin,bottom:thin};
+    [["A12","Item",hL],["B12","HS CODE",hM],["C12","QTY/CTN\n(PCS)",hM],["D12","N.W./CTN\n(KGS)",hM],["E12","G.W./CTN\n(KGS)",hM],["F12","CARTON SIZE\n(CM)",hM],["G12","CARTONS",hM],["H12","TOTAL QTY\n(PCS)",hM],["I12","TOTAL WEIGHT\n(KG)",hM],["J12","VOLUME\n(M3)",hR]].forEach(([c,v,b])=>put(c,v,F11B,CTR,b));
+    row=13; const first=row;
     data.products.forEach(p=>{ws.getRow(row).height=45;
-      put("B"+row,"/",F10,CTR,all); put("C"+row,p.desc,F10,LFT,all); put("D"+row,+p.qty||0,F10,CTR,all);
-      put("E"+row,+p.cartons||0,F10,CTR,all); put("F"+row,+p.nw||0,F10,CTR,all,NUM2); put("G"+row,+p.gw||0,F10,CTR,all,NUM2);
-      merge("H"+row+":I"+row,p.dims||"",F10,CTR,all); row++;});
+      const d=parseDims(p.dims);
+      const volF=d?((d.l/100)+"*"+(d.w/100)+"*"+(d.h/100)+"*G"+row):null;
+      put("A"+row,p.desc,F11,CTR,{left:med,right:thin,top:thin,bottom:thin}); put("B"+row,p.hs,F11,CTR,all); put("C"+row,+p.qty||0,F11,CTR,all,"#,##0");
+      put("D"+row,+p.nw||0,F11,CTR,all,"0.0"); put("E"+row,+p.gw||0,F11,CTR,all,"0.0"); put("F"+row,p.dims||"",F11,CTR,all);
+      put("G"+row,+p.cartons||0,F11,CTR,all,"#,##0");
+      put("H"+row,{formula:"C"+row+"*G"+row},F11,CTR,all,"#,##0");
+      put("I"+row,{formula:"E"+row+"*G"+row},F11,CTR,all,"0.0");
+      put("J"+row,volF?{formula:volF}:"",F11,CTR,{left:thin,right:med,top:thin,bottom:thin},"0.000"); row++;});
     const last=row-1;
-    ws.getRow(row).height=18; merge("B"+row+":C"+row,"TOTAL",F10B,RGT,all);
-    put("D"+row,{formula:"SUM(D"+first+":D"+last+")"},F10B,CTR,all);
-    put("E"+row,{formula:"SUM(E"+first+":E"+last+")"},F10B,CTR,all);
-    put("F"+row,{formula:"SUM(F"+first+":F"+last+")"},F10B,CTR,all,NUM2);
-    put("G"+row,{formula:"SUM(G"+first+":G"+last+")"},F10B,CTR,all,NUM2);
-    merge("H"+row+":I"+row,"",F10B,CTR,all); row++;
+    ws.getRow(row).height=20.1; merge("A"+row+":F"+row,"TOTAL",F11B,RGT,{left:med,right:thin,top:thin,bottom:thin});
+    put("G"+row,{formula:"SUM(G"+first+":G"+last+")"},F11B,CTR,all,"#,##0");
+    put("H"+row,{formula:"SUM(H"+first+":H"+last+")"},F11B,CTR,all,"#,##0");
+    put("I"+row,{formula:"SUM(I"+first+":I"+last+")"},F11B,CTR,all,"0.0");
+    put("J"+row,{formula:"SUM(J"+first+":J"+last+")"},F11B,CTR,{left:thin,right:med,top:thin,bottom:thin},"0.000"); row++;
+    if(data.note){
+      const nt="Note: "+data.note;
+      ws.getRow(row).height=nt.length<=95?24:(nt.length<=190?39:54); merge("A"+row+":J"+row,nt,F11B,{vertical:"middle",wrapText:true,left:med,right:med}); row++;
+    }
+    ws.getRow(row).height=20.1; merge("A"+row+":J"+row,"",F11,LFT,{left:med,right:med,bottom:med});
   } else {
+    ws.getRow(5).height=26.25; merge("B5:I5",title,F18B,CTR,mid);
+    ws.getRow(6).height=18; put("B6","TO:",F10,{vertical:"middle"},{left:thin,top:thin}); merge("C6:G6",data.to,F10,LFT,all); merge("H6:I6","TEL: "+data.tel,F10,LFT,top);
+    ws.getRow(7).height=18; put("B7","ADD:",F10,{vertical:"middle"},{left:thin}); merge("C7:G7",data.addr,F10,LFT,all); merge("H7:I7","P.C.: "+data.pc,F10,LFT,mid);
+    ws.getRow(8).height=18; put("B8","ATTN:",F10,{vertical:"middle"},{left:thin,bottom:thin}); merge("C8:G8",data.attn,F10,LFT,all); merge("H8:I8","",F10,LFT,bot);
+    ws.getRow(9).height=18; merge("B9:I9","",F10,LFT,mid);
+    ws.getRow(10).height=18; put("B10","FM:",F10,{vertical:"middle"},{left:thin,top:thin}); merge("C10:G10","TIANCHI TECHNOLOGY CO., LTD.",F10,LFT,top); merge("H10:I10","REF NO.:"+data.ref,F10,LFT,top);
+    ws.getRow(11).height=18; put("B11","ATTN:",F10,{vertical:"middle"},{left:thin,bottom:thin}); merge("C11:G11","KEVIN",F10,LFT,bot); merge("H11:I11","DATE:"+dateStr(data.date),F10,LFT,bot);
+    ws.getRow(12).height=30;
+    row=13; const first=row;
     [["B12","P/N"],["C12","PRODUCT DESCRIPTION"],["D12","Thickness(MM)"],["E12","HS CODE"],["F12","QUANTITY\n(PCS)"],["G12","UNIT PRICE\n("+data.unit+")"],["H12","Sample Cost(USD)"],["I12","TOTAL AMOUNT(USD)"]].forEach(([c,v])=>put(c,v,F10B,CTR,all));
     data.products.forEach(p=>{ws.getRow(row).height=45;
       put("B"+row,"/",F10,CTR,all); put("C"+row,p.desc,F10,LFT,all); put("D"+row,p.thick,F10,CTR,all); put("E"+row,p.hs,F10,CTR,all);
@@ -245,7 +282,7 @@ function buildPiWorkbook(data, ExcelJS){
       ws.getRow(row).height=ln.length<80?24:33; merge("B"+row+":I"+row,ln,F12B,{vertical:"middle",wrapText:true},mid); row++;});
     const total=calcTotal(data);
     ws.getRow(row).height=157; merge("B"+row+":I"+row,bankText(data,total),F12ABR,{horizontal:"left",vertical:"middle",wrapText:true},all);
-  } else if(data.note){
+  } else if(dt==="CI" && data.note){
     const nt="Note: "+data.note;
     ws.getRow(row).height=nt.length<=95?24:(nt.length<=190?39:54); merge("B"+row+":I"+row,nt,F12B,{vertical:"middle",wrapText:true},top);
   }
@@ -257,21 +294,47 @@ function buildPiWorkbook(data, ExcelJS){
 /* ---- UI ---- */
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");}
 function collect(){
-  const products=[...document.querySelectorAll("#prod_body tr")].map(tr=>{const i=tr.querySelectorAll("input");return{desc:i[0].value,thick:i[1].value,hs:i[2].value,qty:+i[3].value||0,unit:+i[4].value||0,sample:+i[5].value||0,cartons:+i[6].value||0,nw:+i[7].value||0,gw:+i[8].value||0,dims:i[9].value};}).filter(p=>p.desc.trim()!=="");
+  const products=[...document.querySelectorAll("#prod_body tr")].map(tr=>{const i=tr.querySelectorAll("input");return{desc:i[0].value,thick:i[1].value,hs:i[2].value,qty:+i[3].value||0,unit:+i[4].value||0,sample:+i[5].value||0,nw:+i[6].value||0,gw:+i[7].value||0,dims:i[8].value,cartons:+i[9].value||0};}).filter(p=>p.desc.trim()!=="");
   const extras=[...document.querySelectorAll("#extra_body tr")].map(tr=>{const i=tr.querySelectorAll("input");return{label:i[0].value,amount:+i[1].value||0};}).filter(e=>e.label.trim()!=="");
   return{docType:DOC_TYPE,note:document.getElementById("f_note").value,to:document.getElementById("f_to").value,tel:document.getElementById("f_tel").value,addr:document.getElementById("f_addr").value,pc:document.getElementById("f_pc").value,attn:document.getElementById("f_attn").value,date:document.getElementById("f_date").value||new Date().toISOString().slice(0,10),ref:document.getElementById("f_ref").value,unit:document.getElementById("f_unit").value,products,extras,remarks:document.getElementById("f_remarks").value,term:document.getElementById("f_term").value,lead:document.getElementById("f_lead").value,pay:document.getElementById("f_pay").value,bankText:document.getElementById("f_bank").value};
 }
 function render(){
   const d=collect(); const total=calcTotal(d); const pk=calcPacking(d);
   document.getElementById("total_line").innerHTML = d.docType==="PL"
-    ? ("合计：<span>"+pk.qty+" 件 / "+pk.ctn+" 箱，净重 "+pk.nw.toFixed(2)+" KG / 毛重 "+pk.gw.toFixed(2)+" KG</span>")
+    ? ("合计：<span>"+pk.qty.toLocaleString("en-US")+" 件 / "+pk.ctn+" 箱，毛重 "+pk.gw.toFixed(2)+" KG / 体积 "+pk.vol.toFixed(3)+" M3</span>")
     : ("合计 TOTAL：<span>"+money(total)+"</span>");
   const title=docTitle(d.docType);
-  let head, bodyRows, totalRow;
-  if(d.docType==="PL"){
-    head=`<tr><th>P/N</th><th>PRODUCT DESCRIPTION</th><th>QUANTITY(PCS)</th><th>NO. OF CARTONS</th><th>NET WEIGHT(KGS)</th><th>GROSS WEIGHT(KGS)</th><th colspan="2">DIMENSIONS(CM)</th></tr>`;
-    bodyRows=d.products.map(p=>`<tr><td class="c">/</td><td>${esc(p.desc)}</td><td class="c">${p.qty}</td><td class="c">${p.cartons||""}</td><td class="c">${p.nw?p.nw.toFixed(2):""}</td><td class="c">${p.gw?p.gw.toFixed(2):""}</td><td class="c" colspan="2">${esc(p.dims)}</td></tr>`).join("");
-    totalRow=`<tr><td colspan="2" class="r b">TOTAL</td><td class="c b">${pk.qty}</td><td class="c b">${pk.ctn}</td><td class="c b">${pk.nw.toFixed(2)}</td><td class="c b">${pk.gw.toFixed(2)}</td><td colspan="2" class="c b"></td></tr>`;
+  const isPL=d.docType==="PL";
+  const hb = isPL
+    ? `<tr class="hb"><td class="pl-logo-col"></td><td colspan="9" class="h1 pl-txt">TIANCHI TECHNOLOGY CO., LTD.</td></tr>
+    <tr class="hb"><td class="pl-logo-col"></td><td colspan="9" class="c pl-txt">EMAIL: KEVIN@NEOPRENECUSTOM.COM &nbsp;&nbsp; WEB: WWW.NEOPRENECUSTOM.COM</td></tr>
+    <tr class="hb"><td class="pl-logo-col"></td><td colspan="9" class="c pl-txt">TEL:0734-87961816 &nbsp; FAX: 0734-87961819 &nbsp; CEL:86-13417385320</td></tr>
+    <tr class="hb"><td class="pl-logo-col"></td><td colspan="9" class="c pl-txt" style="font-size:11px">ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA</td></tr>`
+    : `<tr class="hb"><td colspan="7" class="h1">TIANCHI TECHNOLOGY CO., LTD.</td><td colspan="1" class="gap"></td></tr>
+    <tr class="hb"><td colspan="7" class="c">EMAIL: KEVIN@NEOPRENECUSTOM.COM &nbsp;&nbsp; WEB: WWW.NEOPRENECUSTOM.COM</td><td colspan="1" class="gap"></td></tr>
+    <tr class="hb"><td colspan="7" class="c">TEL:0734-87961816 &nbsp; FAX: 0734-87961819 &nbsp; CEL:86-13417385320</td><td colspan="1" class="gap"></td></tr>
+    <tr class="hb"><td colspan="7" class="c" style="font-size:11px">ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA</td><td colspan="1" class="gap"></td></tr>`;
+  const span = isPL?10:8;
+  const buyer = isPL
+    ? `<tr><td>TO:</td><td colspan="6">${esc(d.to)}</td><td></td><td colspan="2">TEL: ${esc(d.tel)}</td></tr>
+    <tr><td>ADD:</td><td colspan="7">${esc(d.addr)}</td><td colspan="2">P.C.: ${esc(d.pc)}</td></tr>
+    <tr><td>ATTN:</td><td colspan="6">${esc(d.attn)}</td><td></td><td colspan="2"></td></tr>
+    <tr><td colspan="10">&nbsp;</td></tr>
+    <tr><td>FM:</td><td colspan="6">TIANCHI TECHNOLOGY CO., LTD.</td><td></td><td colspan="2">REF NO.:${esc(d.ref)}</td></tr>
+    <tr><td>ATTN:</td><td colspan="6">KEVIN</td><td></td><td colspan="2">DATE:${esc(dateStr(d.date))}</td></tr>`
+    : `<tr><td>TO:</td><td colspan="4">${esc(d.to)}</td><td colspan="3">TEL: ${esc(d.tel)}</td></tr>
+    <tr><td>ADD:</td><td colspan="4">${esc(d.addr)}</td><td colspan="3">P.C.: ${esc(d.pc)}</td></tr>
+    <tr><td>ATTN:</td><td colspan="7">${esc(d.attn)}</td></tr>
+    <tr><td colspan="8">&nbsp;</td></tr>
+    <tr><td>FM:</td><td colspan="4">TIANCHI TECHNOLOGY CO., LTD.</td><td colspan="3">REF NO.:${esc(d.ref)}</td></tr>
+    <tr><td>ATTN:</td><td colspan="4">KEVIN</td><td colspan="3">DATE:${esc(dateStr(d.date))}</td></tr>`;
+  let head, bodyRows, totalRow, tail="";
+  if(isPL){
+    head=`<tr><th>Item</th><th>HS CODE</th><th>QTY/CTN (PCS)</th><th>N.W./CTN (KGS)</th><th>G.W./CTN (KGS)</th><th>CARTON SIZE (CM)</th><th>CARTONS</th><th>TOTAL QTY (PCS)</th><th>TOTAL WEIGHT (KG)</th><th>VOLUME (M3)</th></tr>`;
+    bodyRows=d.products.map(p=>{const dv=parseDims(p.dims);const vol=dv?dv.l*dv.w*dv.h/1000000*(+p.cartons||0):0;
+      return `<tr><td class="c">${esc(p.desc)}</td><td class="c">${esc(p.hs)}</td><td class="c">${p.qty}</td><td class="c">${p.nw?p.nw.toFixed(1):""}</td><td class="c">${p.gw?p.gw.toFixed(1):""}</td><td class="c">${esc(p.dims)}</td><td class="c">${p.cartons||""}</td><td class="c">${(p.qty*(+p.cartons||0)).toLocaleString("en-US")}</td><td class="c">${(p.gw*(+p.cartons||0)).toFixed(1)}</td><td class="c">${vol.toFixed(3)}</td></tr>`;}).join("");
+    totalRow=`<tr><td colspan="6" class="r b">TOTAL</td><td class="c b">${pk.ctn}</td><td class="c b">${pk.qty.toLocaleString("en-US")}</td><td class="c b">${pk.gw.toFixed(1)}</td><td class="c b">${pk.vol.toFixed(3)}</td></tr>`;
+    tail=`<tr><td colspan="10">&nbsp;</td></tr>`;
   } else {
     head=`<tr><th>P/N</th><th>PRODUCT DESCRIPTION</th><th>Thickness(MM)</th><th>HS CODE</th><th>QUANTITY(PCS)</th><th>UNIT PRICE(${esc(d.unit)})</th><th>Sample Cost(USD)</th><th>TOTAL AMOUNT(USD)</th></tr>`;
     bodyRows=d.products.map(p=>`<tr><td class="c">/</td><td>${esc(p.desc)}</td><td class="c">${esc(p.thick)}</td><td class="c">${esc(p.hs)}</td><td class="c">${p.qty}</td><td class="c">${money(p.unit)}</td><td class="c">${money(p.sample)}</td><td class="c">${money((p.unit+p.sample)*p.qty)}</td></tr>`).join("")
@@ -285,22 +348,15 @@ function render(){
     <tr><td colspan="8" class="terms">3. PAYMENT: ${esc(d.pay)}</td></tr>
     <tr><td colspan="8" class="terms">4. MADE IN CHINA.</td></tr>
     <tr><td colspan="8" class="bank">${esc(bankText(d,total))}</td></tr>`
-    : (d.note?`<tr><td colspan="8">Note: ${esc(d.note)}</td></tr>`:"");
-  document.getElementById("pi_preview").innerHTML=`<img class="logo" src="${LOGO_DATA_URI}" alt="Tianchi Logo"><table>
-    <tr class="hb"><td colspan="7" class="h1">TIANCHI TECHNOLOGY CO., LTD.</td><td colspan="1" class="gap"></td></tr>
-    <tr class="hb"><td colspan="7" class="c">EMAIL: KEVIN@NEOPRENECUSTOM.COM &nbsp;&nbsp; WEB: WWW.NEOPRENECUSTOM.COM</td><td colspan="1" class="gap"></td></tr>
-    <tr class="hb"><td colspan="7" class="c">TEL:0734-87961816 &nbsp; FAX: 0734-87961819 &nbsp; CEL:86-13417385320</td><td colspan="1" class="gap"></td></tr>
-    <tr class="hb"><td colspan="7" class="c" style="font-size:11px">ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA</td><td colspan="1" class="gap"></td></tr>
-    <tr class="hb"><td colspan="8" class="h2t">${title}</td></tr>
-    <tr><td>TO:</td><td colspan="4">${esc(d.to)}</td><td colspan="3">TEL: ${esc(d.tel)}</td></tr>
-    <tr><td>ADD:</td><td colspan="4">${esc(d.addr)}</td><td colspan="3">P.C.: ${esc(d.pc)}</td></tr>
-    <tr><td>ATTN:</td><td colspan="7">${esc(d.attn)}</td></tr>
-    <tr><td colspan="8">&nbsp;</td></tr>
-    <tr><td>FM:</td><td colspan="4">TIANCHI TECHNOLOGY CO., LTD.</td><td colspan="3">REF NO.:${esc(d.ref)}</td></tr>
-    <tr><td>ATTN:</td><td colspan="4">KEVIN</td><td colspan="3">DATE:${esc(dateStr(d.date))}</td></tr>
+    : (d.note?`<tr><td colspan="${span}">Note: ${esc(d.note)}</td></tr>`:"");
+  document.getElementById("pi_preview").innerHTML=`<img class="logo${isPL?" left":""}" src="${LOGO_DATA_URI}" alt="Tianchi Logo"><table>
+    ${hb}
+    <tr class="hb"><td colspan="${span}" class="h2t">${title}</td></tr>
+    ${buyer}
     ${head}
     ${bodyRows}
     ${totalRow}
+    ${tail}
     ${foot}
   </table>`;
 }
@@ -315,10 +371,11 @@ function setDocType(t){DOC_TYPE=t;
   document.getElementById("unit_cell").style.display=(t==="PL")?"none":"block";
   document.getElementById("note_money").style.display=(t==="PL")?"none":"block";
   document.getElementById("note_pl").style.display=(t==="PL")?"block":"none";
+  document.getElementById("th_qty").textContent=(t==="PL")?"每箱件数":"数量";
   render();}
 function prodRow(p){p=p||{desc:"",thick:"3MM",hs:"39269090",qty:1,unit:0,sample:0,cartons:1,nw:"",gw:"",dims:""};
   const tr=document.createElement("tr");
-  tr.innerHTML=`<td><input value="${esc(p.desc)}" oninput="render()"></td><td class="inv"><input value="${esc(p.thick)}" oninput="render()"></td><td class="inv"><input value="${esc(p.hs)}" oninput="render()"></td><td><input type="number" value="${p.qty}" oninput="render()"></td><td class="price"><input type="number" step="0.01" value="${p.unit}" oninput="render()"></td><td class="price"><input type="number" step="0.01" value="${p.sample}" oninput="render()"></td><td class="pk"><input type="number" value="${p.cartons==null?1:p.cartons}" oninput="render()"></td><td class="pk"><input type="number" step="0.01" value="${p.nw==null?"":p.nw}" oninput="render()"></td><td class="pk"><input type="number" step="0.01" value="${p.gw==null?"":p.gw}" oninput="render()"></td><td class="pk"><input value="${esc(p.dims||"")}" oninput="render()"></td><td class="c line-total subtotal"></td><td><button type="button" onclick="this.closest('tr').remove();render()">✕</button></td>`;
+  tr.innerHTML=`<td><input value="${esc(p.desc)}" oninput="render()"></td><td class="inv"><input value="${esc(p.thick)}" oninput="render()"></td><td><input value="${esc(p.hs)}" oninput="render()"></td><td><input type="number" value="${p.qty}" oninput="render()"></td><td class="price"><input type="number" step="0.01" value="${p.unit}" oninput="render()"></td><td class="price"><input type="number" step="0.01" value="${p.sample}" oninput="render()"></td><td class="pk"><input type="number" step="0.01" value="${p.nw==null?"":p.nw}" oninput="render()"></td><td class="pk"><input type="number" step="0.01" value="${p.gw==null?"":p.gw}" oninput="render()"></td><td class="pk"><input value="${esc(p.dims||"")}" oninput="render()"></td><td class="pk"><input type="number" value="${p.cartons==null?1:p.cartons}" oninput="render()"></td><td class="c line-total subtotal"></td><td><button type="button" onclick="this.closest('tr').remove();render()">✕</button></td>`;
   document.getElementById("prod_body").appendChild(tr);}
 function extraRow(e){e=e||{label:"",amount:0};
   const tr=document.createElement("tr");
@@ -369,8 +426,9 @@ function downloadWord(){
   const d=collect(); const total=calcTotal(d); const pk=calcPacking(d); const title=docTitle(d.docType);
   let table, foot;
   if(d.docType==="PL"){
-    const rows=d.products.map(p=>`<tr><td>/</td><td>${esc(p.desc)}</td><td>${p.qty}</td><td>${p.cartons||""}</td><td>${p.nw?p.nw.toFixed(2):""}</td><td>${p.gw?p.gw.toFixed(2):""}</td><td>${esc(p.dims)}</td></tr>`).join("");
-    table=`<table border="1" cellspacing="0" cellpadding="5"><tr><th>P/N</th><th>PRODUCT DESCRIPTION</th><th>QUANTITY(PCS)</th><th>NO. OF CARTONS</th><th>NET WEIGHT(KGS)</th><th>GROSS WEIGHT(KGS)</th><th>DIMENSIONS(CM)</th></tr>${rows}<tr><td colspan="2" align="right"><b>TOTAL</b></td><td><b>${pk.qty}</b></td><td><b>${pk.ctn}</b></td><td><b>${pk.nw.toFixed(2)}</b></td><td><b>${pk.gw.toFixed(2)}</b></td><td></td></tr></table>`;
+    const rows=d.products.map(p=>{const dv=parseDims(p.dims);const vol=dv?dv.l*dv.w*dv.h/1000000*(+p.cartons||0):0;
+      return `<tr><td>${esc(p.desc)}</td><td>${esc(p.hs)}</td><td>${p.qty}</td><td>${p.nw?p.nw.toFixed(1):""}</td><td>${p.gw?p.gw.toFixed(1):""}</td><td>${esc(p.dims)}</td><td>${p.cartons||""}</td><td>${(p.qty*(+p.cartons||0)).toLocaleString("en-US")}</td><td>${(p.gw*(+p.cartons||0)).toFixed(1)}</td><td>${vol.toFixed(3)}</td></tr>`;}).join("");
+    table=`<table border="1" cellspacing="0" cellpadding="5"><tr><th>Item</th><th>HS CODE</th><th>QTY/CTN (PCS)</th><th>N.W./CTN (KGS)</th><th>G.W./CTN (KGS)</th><th>CARTON SIZE (CM)</th><th>CARTONS</th><th>TOTAL QTY (PCS)</th><th>TOTAL WEIGHT (KG)</th><th>VOLUME (M3)</th></tr>${rows}<tr><td colspan="6" align="right"><b>TOTAL</b></td><td><b>${pk.ctn}</b></td><td><b>${pk.qty.toLocaleString("en-US")}</b></td><td><b>${pk.gw.toFixed(1)}</b></td><td><b>${pk.vol.toFixed(3)}</b></td></tr></table>`;
     foot=d.note?`<p>Note: ${esc(d.note)}</p>`:"";
   } else {
     const rows=d.products.map(p=>`<tr><td>/</td><td>${esc(p.desc)}</td><td>${esc(p.thick)}</td><td>${esc(p.hs)}</td><td>${p.qty}</td><td>${money(p.unit)}</td><td>${money(p.sample)}</td><td>${money((p.unit+p.sample)*p.qty)}</td></tr>`).join("");
@@ -382,8 +440,11 @@ function downloadWord(){
   <p style="color:red"><b>${esc(bankText(d,total))}</b></p>`
       : (d.note?`<p>Note: ${esc(d.note)}</p>`:"");
   }
+  const headTable = d.docType==="PL"
+    ? `<table border="0" cellspacing="0" cellpadding="0" width="100%"><tr><td width="120" valign="top"><img src="${LOGO_DATA_URI}" width="110"></td><td style="text-align:center"><h1 style="text-align:center;margin:0">TIANCHI TECHNOLOGY CO., LTD.</h1><p style="text-align:center">EMAIL: KEVIN@NEOPRENECUSTOM.COM &nbsp; WEB: WWW.NEOPRENECUSTOM.COM<br>TEL:0734-87961816 &nbsp; FAX: 0734-87961819 &nbsp; CEL:86-13417385320<br>ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA</p></td></tr></table>`
+    : `<table border="0" cellspacing="0" cellpadding="0" width="100%"><tr><td style="text-align:center"><h1 style="text-align:center;margin:0">TIANCHI TECHNOLOGY CO., LTD.</h1><p style="text-align:center">EMAIL: KEVIN@NEOPRENECUSTOM.COM &nbsp; WEB: WWW.NEOPRENECUSTOM.COM<br>TEL:0734-87961816 &nbsp; FAX: 0734-87961819 &nbsp; CEL:86-13417385320<br>ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA</p></td><td width="120" valign="top" align="right"><img src="${LOGO_DATA_URI}" width="110"></td></tr></table>`;
   const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${title}</title></head><body style="font-family:Arial">
-  <table border="0" cellspacing="0" cellpadding="0" width="100%"><tr><td style="text-align:center"><h1 style="text-align:center;margin:0">TIANCHI TECHNOLOGY CO., LTD.</h1><p style="text-align:center">EMAIL: KEVIN@NEOPRENECUSTOM.COM &nbsp; WEB: WWW.NEOPRENECUSTOM.COM<br>TEL:0734-87961816 &nbsp; FAX: 0734-87961819 &nbsp; CEL:86-13417385320<br>ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA</p></td><td width="120" valign="top" align="right"><img src="${LOGO_DATA_URI}" width="110"></td></tr></table>
+  ${headTable}
   <h2 style="text-align:center">${title}</h2>
   <p>TO: ${esc(d.to)} &nbsp; TEL: ${esc(d.tel)}<br>ADD: ${esc(d.addr)} &nbsp; P.C.: ${esc(d.pc)}<br>ATTN: ${esc(d.attn)}</p>
   <p>FM: TIANCHI TECHNOLOGY CO., LTD. &nbsp; REF NO.:${esc(d.ref)}<br>ATTN: KEVIN &nbsp; DATE:${esc(dateStr(d.date))}</p>
