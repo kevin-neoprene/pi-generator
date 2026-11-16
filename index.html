@@ -6,6 +6,7 @@
 <title>PI / CI / 装箱单生成器 - Tianchi Technology Co., Ltd.</title>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <style>
   *{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f2f3f5;color:#222}
   header{background:#1a3a5c;color:#fff;padding:14px 20px} header h1{margin:0;font-size:20px} header p{margin:4px 0 0;font-size:13px;opacity:.85}
@@ -61,9 +62,9 @@
 <div class="wrap">
   <div class="form">
     <div class="import-box" style="margin-bottom:6px">
-      <strong style="font-size:13px">已有 PI / CI / 装箱单文件？直接导入，自动填表：</strong><br>
-      <button type="button" class="btn ghost" onclick="document.getElementById('f_import').click()">&#128229; 导入 PI / CI / 装箱单 (.xls / .xlsx)</button>
-      <input type="file" id="f_import" accept=".xls,.xlsx" style="display:none" onchange="importPiFile(this.files[0]);this.value=''">
+      <strong style="font-size:13px">已有 PI / CI / 装箱单文件？直接导入，自动填表（Excel 或 PDF）：</strong><br>
+      <button type="button" class="btn ghost" onclick="document.getElementById('f_import').click()">&#128229; 导入 PI / CI / 装箱单 (.xls / .xlsx / .pdf)</button>
+      <input type="file" id="f_import" accept=".xls,.xlsx,.pdf" style="display:none" onchange="importPiFile(this.files[0]);this.value=''">
       <p class="note" id="import_status" style="display:none;margin-top:8px"></p>
     </div>
     <div class="doc-type" style="margin-bottom:6px">
@@ -210,10 +211,139 @@ function parseDateStr(s){
 function _num(v){if(typeof v==="number")return v; if(v==null||v==="")return 0; const n=parseFloat(String(v).replace(/[^0-9.\-]/g,"")); return isNaN(n)?0:n;}
 function _ct(v){return v==null?"":String(v).trim();}
 function _find(rows,pred){for(let r=0;r<rows.length;r++){const row=rows[r]||[];for(let c=0;c<row.length;c++){if(pred(_ct(row[c]),r,c))return{r,c,v:row[c]};}}return null;}
+
+function pdfItemsToRows(pages){
+  const lines=[];
+  pages.forEach(items=>{
+    const sorted=[...items].sort((a,b)=>b.y-a.y||a.x-b.x);
+    let cur=null;
+    sorted.forEach(it=>{
+      if(!cur||Math.abs(it.y-cur.y)>3.5){cur={y:it.y,items:[]};lines.push(cur);}
+      cur.items.push(it);
+    });
+  });
+  lines.forEach(l=>l.items.sort((a,b)=>a.x-b.x));
+  function isStarter(l,idx){
+    if(idx===0)return true;
+    if(!l.items.length)return false;
+    const first=l.items[0].str.trim();
+    const joined=l.items.map(it=>it.str).join(" ");
+    if(/^(TO:|ADD:|ATTN:|FM:|P\/N|TOTAL|REMARKS:|Note:|EMAIL:|TEL:|Item)/.test(first))return true;
+    if(first==="/")return true;
+    if(/^\d+\.\s/.test(first))return true;
+    if(/Bank information/i.test(joined))return true;
+    if(/PROFORMA INVOICE|COMMERCIAL INVOICE|PACKING LIST/i.test(joined))return true;
+    return false;
+  }
+  const starters=lines.map((l,i)=>isStarter(l,i));
+  const starterIdx=lines.map((l,i)=>starters[i]?i:-1).filter(i=>i>=0);
+  const totalStarter=starterIdx.find(i=>lines[i].items.length&&lines[i].items[0].str.trim()==="TOTAL");
+  const totalY=totalStarter!=null?lines[totalStarter].y:null;
+  const hdrStarter=starterIdx.find(i=>lines[i].items.some(it=>it.str.trim()==="P/N"||/^Item$/i.test(it.str.trim())));
+  let descLo=-1e9, descHi=1e9;
+  if(hdrStarter!=null){
+    const hItems=lines[hdrStarter].items;
+    const pnIt=hItems.find(it=>it.str.trim()==="P/N");
+    const thIt=hItems.find(it=>/Thickness/i.test(it.str))||hItems.find(it=>/HS/i.test(it.str));
+    if(pnIt)descLo=pnIt.xc+15;
+    if(thIt)descHi=thIt.xc-15;
+  }
+  const logical=starterIdx.map(i=>({y:lines[i].y,minY:lines[i].y,maxY:lines[i].y,items:[...lines[i].items],kind:lines[i].items.length&&lines[i].items[0].str.trim()==="TOTAL"?"total":(lines[i].items.length&&lines[i].items[0].str.trim()==="/")?"product":"other"}));
+  const attached=new Set(starterIdx);
+  function canAttach(l,r){
+    if(r.kind==="total")return false;
+    if(r.kind==="product")return l.items.every(it=>it.xc>=descLo&&it.xc<=descHi);
+    return true;
+  }
+  let changed=true, iter=0;
+  while(changed&&iter<5){
+    changed=false; iter++;
+    lines.forEach((l,i)=>{
+      if(attached.has(i))return;
+      if(totalY!=null&&l.y<totalY)return;
+      let best=-1,bd=1e9;
+      logical.forEach((r,ri)=>{
+        if(!canAttach(l,r))return;
+        const gap=l.y>r.maxY?l.y-r.maxY:(l.y<r.minY?r.minY-l.y:0);
+        if(gap<bd){bd=gap;best=ri;}
+      });
+      if(best>=0&&bd<=13){logical[best].items.push(...l.items);logical[best].minY=Math.min(logical[best].minY,l.y);logical[best].maxY=Math.max(logical[best].maxY,l.y);attached.add(i);changed=true;}
+    });
+  }
+  lines.forEach((l,i)=>{if(!attached.has(i))logical.push({y:l.y,minY:l.y,maxY:l.y,items:[...l.items],kind:"other"});});
+  logical.sort((a,b)=>b.y-a.y);
+  logical.forEach(r=>r.items.sort((a,b)=>b.y-a.y||a.x-b.x));
+  let hi=-1;
+  logical.forEach((r,i)=>{if(hi<0&&r.items.some(it=>it.str.trim()==="P/N"||/^Item$/i.test(it.str.trim())))hi=i;});
+  if(hi<0)return logical.map(r=>r.items.map(it=>it.str));
+  const hdrItems=logical[hi].items;
+  let descC=null;
+  const descHdr=hdrItems.filter(it=>/PRODUCT|DESCRIPTION|^Item$/i.test(it.str.trim()));
+  if(descHdr.length)descC=descHdr.reduce((s,it)=>s+it.xc,0)/descHdr.length;
+  function isHs(s){return /^(?:\d{6,10}|\d{4,10}(?:\.\d{2,4}){1,2})$/.test(s);}
+  const hsCands=[], mmCands=[];
+  logical.forEach((r,i)=>{if(i<=hi)return; r.items.forEach(it=>{const s=it.str.trim(); if(isHs(s))hsCands.push(it.xc); if(/MM$/i.test(s))mmCands.push(it.xc);});});
+  const med=a=>a.length?a.slice().sort((x,y)=>x-y)[Math.floor(a.length/2)]:null;
+  const hsC=med(hsCands), mmC=med(mmCands);
+  const guardX=Math.max(descC||0, mmC||0, hsC||0);
+  const anchors=[];
+  logical.forEach((r,i)=>{
+    if(i<=hi)return;
+    if(r.items.length&&r.items[0].str.trim()==="TOTAL")return;
+    r.items.forEach(it=>{
+      const s=it.str.trim();
+      if(s==="/")anchors.push({xc:it.xc,left:it.x,right:2*it.xc-it.x});
+      else if(/MM$/i.test(s)&&!(descC!=null&&Math.abs(it.xc-descC)<45))anchors.push({xc:it.xc,left:it.x,right:2*it.xc-it.x});
+      else if(isHs(s))anchors.push({xc:it.xc,left:it.x,right:2*it.xc-it.x});
+      else if(/^US\$|^-?[\d,]+\.\d{2}$/.test(s))anchors.push({xc:it.xc,left:it.x,right:2*it.xc-it.x});
+      else if(/^\d+(\.\d+)?[*x\u00d7]\d/.test(s))anchors.push({xc:it.xc,left:it.x,right:2*it.xc-it.x});
+      else if(/^\d+$/.test(s)&&it.xc>guardX+10)anchors.push({xc:it.xc,left:it.x,right:2*it.xc-it.x});
+      else if(/^\d+\.\d+$/.test(s)&&it.xc>guardX+10)anchors.push({xc:it.xc,left:it.x,right:2*it.xc-it.x});
+    });
+  });
+  anchors.sort((a,b)=>a.xc-b.xc);
+  const clusters=[];
+  anchors.forEach(a=>{const last=clusters[clusters.length-1];if(last&&Math.abs(a.xc-last.center)<=8){last.items.push(a);last.center=last.items.reduce((s,x)=>s+x.xc,0)/last.items.length;}else clusters.push({center:a.xc,items:[a]});});
+  let centers=clusters.map(c=>c.center);
+  if(descC!=null&&!centers.some(c=>Math.abs(c-descC)<=15))centers.push(descC);
+  centers.sort((a,b)=>a-b);
+  if(!centers.length)return logical.map(r=>r.items.map(it=>it.str));
+  const spans=centers.map(c=>({left:Infinity,right:-Infinity}));
+  function spanAdd(ci,it){const l=it.x, r=2*it.xc-it.x; if(l<spanAddL(ci))spans[ci].left=l; if(r>spans[ci].right)spans[ci].right=r;}
+  function spanAddL(ci){return spans[ci].left;}
+  hdrItems.forEach(it=>{let ci=0,bd=1e9;centers.forEach((c,i)=>{const d=Math.abs(it.xc-c);if(d<bd){bd=d;ci=i;}});spanAdd(ci,it);});
+  clusters.forEach(cl=>{let ci=centers.indexOf(cl.center);cl.items.forEach(it=>spanAdd(ci,it));});
+  spans.forEach((sp,i)=>{if(!isFinite(sp.left)){sp.left=centers[i]-20;sp.right=centers[i]+20;}});
+  const bounds=[];
+  for(let i=0;i<centers.length-1;i++){
+    bounds.push(spans[i].right<spans[i+1].left?(spans[i].right+spans[i+1].left)/2:(centers[i]+centers[i+1])/2);
+  }
+  function bucket(row){
+    const out=new Array(centers.length).fill("");
+    row.items.forEach(it=>{
+      let c=0;
+      while(c<bounds.length&&it.xc>=bounds[c])c++;
+      out[c]=out[c]?out[c]+" "+it.str:it.str;
+    });
+    return out;
+  }
+  return logical.map(bucket);
+}
 function parsePiSheet(rows){
   const d={docType:"PI",company:"",coEmail:"",coWeb:"",coTel:"",coFax:"",coCel:"",coAddr:"",to:"",tel:"",addr:"",pc:"",attn:"",ref:"",date:"",unit:"USD/PC",products:[],extras:[],remarks:"",note:"",fmAttn:"KEVIN"};
-  for(let r=0;r<Math.min(6,rows.length);r++){(rows[r]||[]).forEach(v=>{const s=_ct(v).toUpperCase();if(s.includes("COMMERCIAL INVOICE"))d.docType="CI";else if(s.includes("PACKING LIST"))d.docType="PL";else if(s.includes("PROFORMA INVOICE"))d.docType="PI";});}
-  const r0=rows[0]||[]; for(let c=0;c<r0.length;c++){if(_ct(r0[c])){d.company=_ct(r0[c]);break;}}
+  let titleIdx=-1;
+  for(let r=0;r<Math.min(6,rows.length);r++){const joined=(rows[r]||[]).map(_ct).filter(s=>s!=="").join(" ").toUpperCase();if(joined.includes("COMMERCIAL INVOICE")){d.docType="CI";titleIdx=r;}else if(joined.includes("PACKING LIST")){d.docType="PL";titleIdx=r;}else if(joined.includes("PROFORMA INVOICE")){d.docType="PI";titleIdx=r;}}
+  const startRow=titleIdx>=0?titleIdx+1:5;
+  function labelCells(label){
+    const out=[];
+    for(let r=startRow;r<rows.length;r++){const row=rows[r]||[];
+      for(let c=0;c<row.length;c++){const s=_ct(row[c]);
+        if(s===label)out.push({r,c,rest:""});
+        else if(s.indexOf(label+" ")===0)out.push({r,c,rest:s.slice(label.length+1).trim()});
+      }}
+    return out;
+  }
+  const r0=rows[0]||[]; d.company=r0.map(_ct).filter(s=>s!=="").join(" ");
   const line1=(rows[1]||[]).map(_ct).join(" ");
   let m=line1.match(/EMAIL:\s*(\S+)/i); if(m)d.coEmail=m[1];
   m=line1.match(/WEB:\s*(\S+)/i); if(m)d.coWeb=m[1];
@@ -223,19 +353,25 @@ function parsePiSheet(rows){
   m=line2.match(/CEL:\s*(.+)$/i); if(m)d.coCel=m[1].trim();
   const line3=(rows[3]||[]).map(_ct).join(" ");
   m=line3.match(/ADD:\s*(.+)$/i); if(m)d.coAddr=m[1].trim();
-  const toC=_find(rows,s=>s==="TO:");
-  if(toC){const row=rows[toC.r]||[]; for(let c=toC.c+1;c<row.length;c++){if(_ct(row[c])){d.to=_ct(row[c]);break;}}
-    const telC=row.find(v=>/TEL:/i.test(_ct(v))); if(telC)d.tel=_ct(telC).replace(/TEL:\s*/i,"").trim();}
-  const addC=_find(rows,s=>s==="ADD:");
-  if(addC){const row=rows[addC.r]||[]; for(let c=addC.c+1;c<row.length;c++){if(_ct(row[c])){d.addr=_ct(row[c]);break;}}
-    const pcC=row.find(v=>/P\.C\./i.test(_ct(v))); if(pcC)d.pc=_ct(pcC).replace(/P\.C\.:\s*/i,"").trim();}
-  const attns=[]; rows.forEach((row,r)=>{(row||[]).forEach((v,c)=>{if(_ct(v)==="ATTN:")attns.push({r,c});});});
-  if(attns.length>=1){const a=attns[0]; const row=rows[a.r]||[]; for(let c=a.c+1;c<row.length;c++){if(_ct(row[c])){d.attn=_ct(row[c]);break;}}}
-  if(attns.length>=2){const a=attns[1]; const row=rows[a.r]||[]; for(let c=a.c+1;c<row.length;c++){if(_ct(row[c])){d.fmAttn=_ct(row[c]);break;}}}
-  const refC=_find(rows,s=>/REF\s*NO/i.test(s));
-  if(refC){const mm=_ct(refC.v).match(/REF\s*NO\.?:?\s*(.+)$/i); if(mm)d.ref=mm[1].trim();}
-  const dateC=_find(rows,s=>/^DATE/i.test(s));
-  if(dateC){const mm=_ct(dateC.v).match(/DATE\s*:?\s*(.+)$/i); if(mm)d.date=parseDateStr(mm[1]);}
+  const toL=labelCells("TO:")[0];
+  if(toL){const row=rows[toL.r]||[]; const cells=toL.rest?[toL.rest]:[]; let telIdx=-1;
+    for(let c=toL.c+1;c<row.length;c++){const s=_ct(row[c]); if(/TEL:/i.test(s)){telIdx=c;break;} if(s)cells.push(s);}
+    d.to=cells.join(" ");
+    if(telIdx>=0)d.tel=row.slice(telIdx).map(_ct).filter(s=>s!=="").join(" ").replace(/TEL:\s*/i,"").trim();}
+  const addL=labelCells("ADD:")[0];
+  if(addL){const row=rows[addL.r]||[]; const cells=addL.rest?[addL.rest]:[]; let pcIdx=-1;
+    for(let c=addL.c+1;c<row.length;c++){const s=_ct(row[c]); if(/P\.C\./i.test(s)){pcIdx=c;break;} if(s)cells.push(s);}
+    d.addr=cells.join(" ");
+    if(pcIdx>=0)d.pc=row.slice(pcIdx).map(_ct).filter(s=>s!=="").join(" ").replace(/P\.C\.:\s*/i,"").trim();}
+  const attns=labelCells("ATTN:");
+  function attnVal(a){const row=rows[a.r]||[]; const cells=a.rest?[a.rest]:[];
+    for(let c=a.c+1;c<row.length;c++){const s=_ct(row[c]); if(/^(DATE|REF|TEL)\s*:/i.test(s))break; if(s)cells.push(s);} return cells.join(" ");}
+  if(attns.length>=1)d.attn=attnVal(attns[0]);
+  if(attns.length>=2)d.fmAttn=attnVal(attns[1]);
+  for(let r=startRow;r<rows.length;r++){const joined=(rows[r]||[]).map(_ct).filter(s=>s!=="").join(" ");
+    if(!d.ref){const mm=joined.match(/REF\s*NO\.?:?\s*(\S+)/i); if(mm)d.ref=mm[1].trim();}
+    if(!d.date){const mm=joined.match(/DATE\s*:?\s*(.+)$/i); if(mm)d.date=parseDateStr(mm[1]);}
+    if(d.ref&&d.date)break;}
   let hr=-1; const cols={};
   for(let r=0;r<rows.length;r++){const row=(rows[r]||[]).map(_ct);
     const hasPN=row.some(s=>s==="P/N"), hasItem=row.some(s=>/^Item$/i.test(s));
@@ -243,15 +379,15 @@ function parsePiSheet(rows){
     hr=r;
     row.forEach((s,c)=>{const u=s.toUpperCase().replace(/\n/g," ");
       if(u==="P/N"||u==="ITEM")cols.pn=c;
-      if(u.includes("PRODUCT DESCRIPTION")||u==="ITEM")cols.desc=c;
+      if(u.includes("PRODUCT")||u.includes("DESCRIPTION")||u==="ITEM")cols.desc=c;
       if(u.includes("THICKNESS"))cols.thick=c;
-      if(u==="HS CODE")cols.hs=c;
+      if(u.includes("HS"))cols.hs=c;
       if(u.includes("TOTAL QTY"))cols.tQty=c;
       else if(u.includes("TOTAL WEIGHT"))cols.tWeight=c;
       else if(u.includes("VOLUME"))cols.vol=c;
       else if(u.includes("QTY")&&u.includes("CTN"))cols.qtyCtn=c;
       else if(u.includes("QUANTITY")||u.includes("QTY"))cols.qty=c;
-      if(u.includes("UNIT PRICE")){cols.unit=c; const mm2=s.match(/\(([^)]+)\)/); if(mm2)d.unit=mm2[1];}
+      if(u.includes("PRICE")&&!u.includes("TOTAL")){cols.unit=c; const mm2=s.match(/\(([^)]+)\)/); if(mm2){const u2=mm2[1]; d.unit=/PC/i.test(u2)?"USD/PC":/Sheet/i.test(u2)?"USD/Sheet":/Set/i.test(u2)?"USD/Set":/Pair/i.test(u2)?"USD/Pair":u2;}}
       if(u.includes("SAMPLE")&&u.includes("COST"))cols.sample=c;
       if(u.includes("TOTAL AMOUNT"))cols.total=c;
       if(u.includes("N.W"))cols.nw=c;
@@ -276,17 +412,49 @@ function parsePiSheet(rows){
         if(!desc)continue;
         d.products.push({desc,thick:"",hs:_ct(row[cols.hs]),qty:_num(row[cols.qtyCtn]),unit:0,sample:0,nw:_num(row[cols.nw]),gw:_num(row[cols.gw]),dims:_ct(row[cols.dims]),cartons:_num(row[cols.cartons])});
       }else{
-        if(!desc){
-          const amtCell=_ct(row[cols.total]);
-          if(firstTxt&&amtCell!=="")d.extras.push({label:firstTxt,amount:_num(row[cols.total])});
+        const q=_num(row[cols.qty]), u=_num(row[cols.unit]), sm=_num(row[cols.sample]), tAmt=_ct(row[cols.total]);
+        const isLabelOnly=q===0&&u===0&&sm===0&&tAmt===""&&row.some(v=>_ct(v)!=="");
+        if(isLabelOnly)continue;
+        if(q===0&&u===0&&sm===0&&tAmt!==""){
+          const parts=[];
+          let j=r-1;
+          const back=[];
+          while(j>hr){
+            const br=rows[j]||[];
+            const bq=_num(br[cols.qty]), bu=_num(br[cols.unit]), bsm=_num(br[cols.sample]), btAmt=_ct(br[cols.total]);
+            const bFirst=_ct(br.find(v=>_ct(v)!=="")||"");
+            if(bq===0&&bu===0&&bsm===0&&btAmt===""&&br.some(v=>_ct(v)!=="")&&!/^TOTAL$/i.test(bFirst)){back.unshift(br.map(_ct).filter(s=>s!=="").join(" ")); j--;}
+            else break;
+          }
+          parts.push(...back);
+          const ownLab=row.map(_ct).filter((s,c)=>s!==""&&c!==cols.total).join(" ");
+          if(ownLab)parts.push(ownLab);
+          j=r+1;
+          while(j<rows.length){
+            const fr=rows[j]||[];
+            const fq=_num(fr[cols.qty]), fu=_num(fr[cols.unit]), fsm=_num(fr[cols.sample]), ftAmt=_ct(fr[cols.total]);
+            const fFirst=_ct(fr.find(v=>_ct(v)!=="")||"");
+            if(fq===0&&fu===0&&fsm===0&&ftAmt===""&&fr.some(v=>_ct(v)!=="")&&!/^TOTAL$/i.test(fFirst)){parts.push(fr.map(_ct).filter(s=>s!=="").join(" ")); j++;}
+            else break;
+          }
+          const lab=parts.join(" ").trim();
+          if(lab)d.extras.push({label:lab,amount:_num(tAmt)});
           continue;
         }
-        d.products.push({desc,thick:_ct(row[cols.thick]),hs:_ct(row[cols.hs]),qty:_num(row[cols.qty]),unit:_num(row[cols.unit]),sample:_num(row[cols.sample]),nw:0,gw:0,dims:"",cartons:1});
+        if(!desc)continue;
+        d.products.push({desc,thick:_ct(row[cols.thick]),hs:_ct(row[cols.hs]),qty:q,unit:u,sample:sm,nw:0,gw:0,dims:"",cartons:1});
       }
     }
-    for(let r=hr+1;r<rows.length;r++){const row=rows[r]||[];const f=row.find(v=>_ct(v)!=="");const t=f==null?"":_ct(f);
-      if(/^REMARKS:/i.test(t))d.remarks=t.replace(/^REMARKS:\s*/i,"");
-      if(/^Note:/i.test(t))d.note=t.replace(/^Note:\s*/i,"");}
+    let inRemarks=false,inNote=false;
+    for(let r=hr+1;r<rows.length;r++){const row=rows[r]||[];
+      const fi=row.findIndex(v=>_ct(v)!=="");
+      if(fi<0)continue;
+      const t=row.slice(fi).map(_ct).filter(s=>s!=="").join(" ");
+      if(/^Bank information/i.test(t)||/^\d+\./.test(t))break;
+      if(/^REMARKS:/i.test(t)){d.remarks=t.replace(/^REMARKS:\s*/i,"");inRemarks=true;inNote=false;continue;}
+      if(/^Note:/i.test(t)){d.note=t.replace(/^Note:\s*/i,"");inRemarks=false;inNote=true;continue;}
+      if(inRemarks&&t)d.remarks+=" "+t;
+      else if(inNote&&t)d.note+=" "+t;}
   }
   if(!d.ref&&d.date)d.ref=refFromDate(d.date);
   return d;
@@ -517,7 +685,7 @@ function fillForm(s){
   document.getElementById("f_fmAttn").value=s.fmAttn||"KEVIN";
   document.getElementById("f_to").value=s.to||""; document.getElementById("f_tel").value=s.tel||""; document.getElementById("f_addr").value=s.addr||"";
   document.getElementById("f_pc").value=s.pc||""; document.getElementById("f_attn").value=s.attn||""; document.getElementById("f_date").value=s.date||"";
-  document.getElementById("f_ref").value=s.ref||""; document.getElementById("f_unit").value=s.unit||"USD/PC";
+  document.getElementById("f_ref").value=s.ref||""; const uSel=document.getElementById("f_unit"); if(s.unit&&![...uSel.options].some(o=>o.value===s.unit)){const o=document.createElement("option"); o.value=s.unit; o.textContent=s.unit; uSel.appendChild(o);} uSel.value=s.unit||"USD/PC";
   document.getElementById("f_remarks").value=s.remarks||""; document.getElementById("f_lead").value=s.lead||"7-9 DAYS AFTER CONFIRMING THE ORDER."; document.getElementById("f_term").value=s.term||"EXW"; document.getElementById("f_note").value=s.note||"";
   setDocType(s.docType||"PI");
   document.getElementById("prod_body").innerHTML=""; (s.products||[]).forEach(prodRow);
@@ -530,14 +698,30 @@ function loadSample(name){
 async function importPiFile(file){
   if(!file) return;
   const st=document.getElementById("import_status"); st.style.display="none";
-  if(typeof XLSX==="undefined"){alert("导入组件还没加载好，请刷新页面再试一次。");return;}
+  const isPdf=/\.pdf$/i.test(file.name||"");
   try{
-    const buf=await file.arrayBuffer();
-    const wb=XLSX.read(buf,{type:"array"});
-    const ws=wb.Sheets[wb.SheetNames[0]];
-    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+    let rows;
+    if(isPdf){
+      if(typeof pdfjsLib==="undefined"){alert("PDF 导入组件还没加载好，请刷新页面再试一次。");return;}
+      pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+      const buf=await file.arrayBuffer();
+      const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+      const pages=[];
+      for(let pg=1;pg<=pdf.numPages;pg++){
+        const page=await pdf.getPage(pg);
+        const tc=await page.getTextContent();
+        pages.push(tc.items.filter(it=>it.str&&it.str.trim()!=="").map(it=>({str:it.str,x:it.transform[4],xc:it.transform[4]+(it.width||0)/2,y:it.transform[5]})));
+      }
+      rows=pdfItemsToRows(pages);
+    }else{
+      if(typeof XLSX==="undefined"){alert("导入组件还没加载好，请刷新页面再试一次。");return;}
+      const buf=await file.arrayBuffer();
+      const wb=XLSX.read(buf,{type:"array"});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+    }
     const d=parsePiSheet(rows);
-    if(!d.products.length){alert("这个文件里没读到产品行，请确认是 PI / CI / 装箱单的 Excel 文件。");return;}
+    if(!d.products.length){alert("这个文件里没读到产品行，请确认是 PI / CI / 装箱单的 PDF 或 Excel 文件。");return;}
     fillForm(d);
     st.textContent="已导入："+(d.to||"")+"，"+d.products.length+" 个产品（"+docTitle(d.docType)+"），请核对后下载。";
     st.style.display="block";
