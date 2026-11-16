@@ -113,7 +113,7 @@
 
     <div id="sec_calc" style="display:none">
     <h2>报价计算器（按供应商价目表算）</h2>
-    <p class="note">算法和供应商那张表一致：<b>成本 = 胶料单价 ×（总厚度 − 0.5）+ 面布A + 面布B + 贴合×2</b>，0.5 是两层面布加胶水的厚度；<b>美元单价 = 成本 ÷ 汇率 ×（1 + 加价）</b>。人民币成本只显示在这里，不会出现在发给客户的报价单上。</p>
+    <p class="note">算价是给<b>片材（原材料）</b>算成本，产品表里填的是<b>成品</b>，两者分开：算价行只算出单价，点「→ 产品」把单价填进产品行，成品名称自己写。成本 = 胶料单价 ×（总厚度 − 面布+胶水）+ 面布 + 贴合费；面布+胶水每面约 0.25mm，<b>双面扣 0.5mm、单面扣 0.25mm</b>，双面两层面布、贴合×2，单面一层面布、贴合×1。面布可以填价目表以外的布（填名字和单价）；胶料硬度（如 9度）不用写进产品描述，写进下面的 Special Notes 备注里。<b>美元单价 = 成本 ÷ 汇率 ×（1 + 加价）</b>。人民币成本只显示在这里，不会出现在发给客户的报价单上。</p>
     <div class="row3">
       <div><label>汇率 RMB → USD（人民币 ÷ 汇率）</label><input id="q_fx" type="number" step="0.01" value="6.6" oninput="onCalcInput()"></div>
       <div><label>加价 Markup %</label><input id="q_markup" type="number" step="0.1" value="0" oninput="onCalcInput()"></div>
@@ -125,11 +125,12 @@
         <div><label>胶料 ¥/mm</label><div id="q_rubber_rates"></div></div>
         <div><label>面布 ¥/面</label><div id="q_fabric_rates"></div></div>
       </div>
-      <div class="row2"><div><label>面布+胶水占的厚度 mm（默认 0.5）</label><input id="q_deduct" type="number" step="0.1" value="0.5" oninput="onCalcInput()"></div>
+      <div class="row2"><div><label>面布+胶水占的厚度 mm（双面默认 0.5，单面按一半算）</label><input id="q_deduct" type="number" step="0.1" value="0.5" oninput="onCalcInput()"></div>
       <div><label>&nbsp;</label><button type="button" class="btn ghost" onclick="resetRates()">恢复供应商默认价目表</button></div></div>
     </details>
-    <table class="edit"><thead><tr><th>胶料</th><th>总厚度 mm</th><th>面布 A</th><th>面布 B</th><th>尺寸 CM</th><th>数量（片）</th><th>成本 ¥/张</th><th>单价 USD/张</th><th>小计 USD</th><th></th></tr></thead>
+    <table class="edit"><thead><tr><th>胶料</th><th>总厚度 mm</th><th>贴合</th><th>面布 A（名 + ¥/面）</th><th>面布 B（名 + ¥/面）</th><th>尺寸 CM</th><th>数量（片）</th><th>成本 ¥/张</th><th>单价 USD/张</th><th>小计 USD</th><th></th></tr></thead>
     <tbody id="calc_body"></tbody></table>
+    <datalist id="fabricList"></datalist>
     <p style="margin-top:6px"><button type="button" class="btn ghost" onclick="addCalcRow()">+ 加一算价行</button></p>
     </div>
 
@@ -218,9 +219,9 @@ const SAMPLES = {
     products:[{desc:"Neoprene Panel",thick:"",hs:"39269090",qty:500,unit:0,sample:0,cartons:40,nw:14,gw:14.5,dims:"49.5*45.5*43"},{desc:"Neoprene Base",thick:"",hs:"39269090",qty:4000,unit:0,sample:0,cartons:5,nw:13.5,gw:14,dims:"41*60*41"}],
     extras:[], note:"", remarks:"", lead:"7-9 DAYS AFTER CONFIRMING THE ORDER.", term:"EXW", bank:"HK"},
   RickQT: {to:"KAT Europe Ltd", tel:"+44 (0)1430 411388", addr:"Riplingham House, Westoby Lane, Riplingham, Cottingham, East Yorkshire, HU20 3XT, UK", pc:"HU20 3XT", attn:"Rick Clark", date:"2026-11-07", ref:"QT-261107-01", unit:"USD/Sheet", docType:"QT",
-    products:[], extras:[], remarks:"", note:"", lead:"TO BE CONFIRMED PER ORDER", term:"EXW", bank:"HK",
+    products:[{desc:"Neoprene Sheet 5mm",thick:"5MM",hs:"39269090",qty:20,unit:15.3,sample:0,cartons:1,nw:"",gw:"",dims:""},{desc:"Neoprene Sheet 6mm",thick:"6MM",hs:"39269090",qty:20,unit:17.42,sample:0,cartons:1,nw:"",gw:"",dims:""},{desc:"Neoprene Sheet 7mm",thick:"7MM",hs:"39269090",qty:20,unit:19.55,sample:0,cartons:1,nw:"",gw:"",dims:""}], extras:[], remarks:"Material: SBR 9°, black T-fabric laminated on both sides; sheet size 50×130cm.", note:"", lead:"TO BE CONFIRMED PER ORDER", term:"EXW", bank:"HK",
     project:"Neoprene Sheet Quotation", validUntil:"2026-12-07", pol:"", pod:"",
-    calc:[{rubber:"SBR9",thick:5,fabA:"TBLK",fabB:"TBLK",lam:6,size:"50*130",qty:20},{rubber:"SBR9",thick:6,fabA:"TBLK",fabB:"TBLK",lam:6,size:"50*130",qty:20},{rubber:"SBR9",thick:7,fabA:"TBLK",fabB:"TBLK",lam:6,size:"50*130",qty:20}]}
+    calc:[{rubber:"SBR9",thick:5,sides:"2",fabA:"T布(黑色)",fabAprice:13,fabB:"T布(黑色)",fabBprice:13,size:"50*130",qty:20},{rubber:"SBR9",thick:6,sides:"2",fabA:"T布(黑色)",fabAprice:13,fabB:"T布(黑色)",fabBprice:13,size:"50*130",qty:20},{rubber:"SBR9",thick:7,sides:"2",fabA:"T布(黑色)",fabAprice:13,fabB:"T布(黑色)",fabBprice:13,size:"50*130",qty:20}]}
 };
 function ordinal(n){return n===1?"1ST":n===2?"2ND":n===3?"3RD":n+"TH";}
 function dateStr(iso){const d=new Date(iso+"T00:00:00");const M=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];return ordinal(d.getDate())+","+M[d.getMonth()]+","+d.getFullYear();}
@@ -229,10 +230,36 @@ function calcTotal(data){let t=0;data.products.forEach(p=>{t+=((+p.unit||0)+(+p.
 function money(n){return "$"+Number(n||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});}
 function docTitle(dt){return dt==="CI"?"COMMERCIAL INVOICE":dt==="PL"?"PACKING LIST":dt==="QT"?"QUOTATION":"PROFORMA INVOICE";}
 /* ---- Quotation calculator: supplier build-up price, RMB cost -> USD EXW ----
-   unit cost (RMB/sheet) = rubber ¥/mm x (total thickness - fabric+glue 0.5mm)
-                           + fabric face A + fabric face B + lamination x 2
+   The calculator prices the SHEET (raw material). The product table prices the
+   FINISHED product. They are separate: a calc line only computes a USD/sheet
+   price; the user pushes that price into a product row and names the finished
+   product there. Material detail (rubber hardness etc.) belongs in the
+   Special Notes, not in the product description.
+   unit cost (RMB/sheet) = rubber ¥/mm x (total thickness - fabric+glue)
+                           + fabric faces + lamination x faces
+   fabric+glue is ~0.25mm per laminated face (0.5 double-sided, 0.25 single);
+   a face is one fabric + one lamination. Fabric is free text: any fabric may
+   be entered (name + ¥/face); the rate card only holds the common presets.
    USD/sheet = cost RMB / fx x (1 + markup). RMB cost never leaves this page:
    the customer-facing quotation shows USD only. */
+function rubberFamily(id){
+  const r=QUOTE_RUBBERS.find(x=>x.id===id);
+  if(r)return r.label.replace(/\(.*\)$/,"").trim();
+  return String(id||"").replace(/[0-9]+$/,"");
+}
+function fabricLabel(v){
+  if(v==null||v==="")return "";
+  const f=QUOTE_FABRICS.find(x=>x.id===v||x.label===String(v).trim());
+  return f?f.label:String(v).trim();
+}
+function fabricPrice(name,rates){
+  if(name==null||name==="")return 0;
+  const fab=(rates&&rates.fabric)||{};
+  if(fab[name]!=null)return +fab[name];
+  const f=QUOTE_FABRICS.find(x=>x.label===String(name).trim());
+  if(f&&fab[f.id]!=null)return +fab[f.id];
+  return 0;
+}
 const QUOTE_RUBBERS=[
  {id:"CR6",label:"CR(6度)",rate:45},
  {id:"CR9",label:"CR(9度)",rate:48},
@@ -260,25 +287,31 @@ function quoteRates(){
   return{rubber:Object.fromEntries(QUOTE_RUBBERS.map(r=>[r.id,r.rate])),fabric:Object.fromEntries(QUOTE_FABRICS.map(f=>[f.id,f.rate])),lam:QUOTE_DEFAULTS.lam,deduct:QUOTE_DEFAULTS.deduct,fx:QUOTE_DEFAULTS.fx,markup:QUOTE_DEFAULTS.markup};
 }
 function quoteDesc(line){
-  const rb=(QUOTE_RUBBERS.find(r=>r.id===line.rubber)||{}).label||line.rubber||"";
-  const fa=(QUOTE_FABRICS.find(f=>f.id===line.fabA)||{}).label||line.fabA||"";
-  const fb=(QUOTE_FABRICS.find(f=>f.id===line.fabB)||{}).label||line.fabB||"";
+  const rb=rubberFamily(line.rubber);
+  const fa=fabricLabel(line.fabA);
+  const fb=fabricLabel(line.fabB);
+  const faces=(String(line.sides||"2")==="1")?1:2;
   const th=(+line.thick||0);
   const size=String(line.size||"50*130").replace(/\s+/g,"").toUpperCase();
-  return th+"mm "+rb+"+"+fa+"+"+fb+" "+size+"CM";
+  const parts=[th+"mm "+rb];
+  if(fa)parts.push(fa);
+  if(faces===2&&fb)parts.push(fb);
+  return parts.join("+")+" "+size+"CM";
 }
 function calcQuoteLine(line,rates){
   rates=rates||quoteRates();
   const th=+line.thick||0;
-  const core=Math.round((th-(+rates.deduct||0))*10)/10;
+  const faces=(String(line.sides||"2")==="1")?1:2;
+  const deduct=+rates.deduct||0;
+  const core=Math.round((th-deduct*faces/2)*100)/100;
   const rr=+((rates.rubber||{})[line.rubber]||0);
-  const fa=+((rates.fabric||{})[line.fabA]||0);
-  const fb=+((rates.fabric||{})[line.fabB]||0);
+  const fa=(line.fabAprice!=null&&line.fabAprice!=="")?+line.fabAprice:fabricPrice(line.fabA,rates);
+  const fb=faces===2?((line.fabBprice!=null&&line.fabBprice!=="")?+line.fabBprice:fabricPrice(line.fabB,rates)):0;
   const lam=+line.lam||+rates.lam||0;
-  const costRmb=Math.round((rr*core+fa+fb+lam*2)*100)/100;
+  const costRmb=Math.round((rr*core+fa+fb+lam*faces)*100)/100;
   const usd=Math.round(costRmb/(+rates.fx||6.6)*(1+(+rates.markup||0)/100)*100)/100;
   const qty=+line.qty||0;
-  return{core,costRmb,usd,total:Math.round(usd*qty*100)/100,desc:quoteDesc(line)};
+  return{core,costRmb,usd,total:Math.round(usd*qty*100)/100,desc:quoteDesc(line),faces};
 }
 function parseDims(s){const m=String(s||"").replace(/cm/gi,"").split(/[*x×X]/).map(v=>parseFloat(v.trim())).filter(v=>!isNaN(v));return m.length>=3?{l:m[0],w:m[1],h:m[2]}:null;}
 function calcPacking(data){let q=0,c=0,nw=0,gw=0,vol=0;data.products.forEach(p=>{const ct=+p.cartons||0;const d=parseDims(p.dims);q+=(+p.qty||0)*ct;c+=ct;nw+=(+p.nw||0)*ct;gw+=(+p.gw||0)*ct;if(d)vol+=d.l*d.w*d.h/1000000*ct;});return{qty:q,ctn:c,nw:Math.round(nw*100)/100,gw:Math.round(gw*100)/100,vol:Math.round(vol*1000)/1000};}
@@ -827,8 +860,8 @@ function setDocType(t){
     if(/^Kevin\d{6}$/.test(refEl.value)){const dv=document.getElementById("f_date").value||new Date().toISOString().slice(0,10); refEl.value="QT-"+dv.slice(2,4)+dv.slice(5,7)+dv.slice(8,10)+"-01";}
     const leadEl=document.getElementById("f_lead");
     if(leadEl.value==="7-9 DAYS AFTER CONFIRMING THE ORDER.")leadEl.value="TO BE CONFIRMED PER ORDER";
-    if(!CALC.length&&!document.querySelectorAll("#prod_body tr").length)CALC=[{rubber:"SBR9",thick:5,fabA:"TBLK",fabB:"TBLK",size:"50*130",qty:20}];
-    renderCalc(); syncCalcToProducts();
+    if(!CALC.length)CALC=[defaultCalcLine()];
+    renderCalc();
   }
   if(prev==="QT"&&t!=="QT"){
     const refEl=document.getElementById("f_ref");
@@ -845,7 +878,7 @@ function extraRow(e){e=e||{label:"",amount:0};
   const tr=document.createElement("tr");
   tr.innerHTML=`<td><input value="${esc(e.label)}" oninput="render()"></td><td><input type="number" step="0.01" value="${e.amount}" oninput="render()"></td><td><button type="button" onclick="this.closest('tr').remove();render()">✕</button></td>`;
   document.getElementById("extra_body").appendChild(tr);}
-function addProductRow(){if(DOC_TYPE==="QT"){addCalcRow();return;}prodRow();render();}
+function addProductRow(){prodRow();render();}
 function addExtraRow(){extraRow();render();}
 
 /* ---- Quotation calculator UI: calc lines own the first product rows ---- */
@@ -864,13 +897,20 @@ function renderRates(){
   const r=quoteRates();
   document.getElementById("q_rubber_rates").innerHTML=QUOTE_RUBBERS.map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;margin:2px 0"><span>${x.label}</span><span>¥ <input type="number" step="0.5" id="qr_rubber_${x.id}" value="${r.rubber[x.id]}" style="width:70px" oninput="onCalcInput()"> /mm</span></div>`).join("");
   document.getElementById("q_fabric_rates").innerHTML=QUOTE_FABRICS.map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;margin:2px 0"><span>${x.label}</span><span>¥ <input type="number" step="0.5" id="qr_fabric_${x.id}" value="${r.fabric[x.id]}" style="width:70px" oninput="onCalcInput()"> /面</span></div>`).join("");
+  const dl=document.getElementById("fabricList");
+  if(dl)dl.innerHTML=QUOTE_FABRICS.map(x=>`<option value="${x.label}">`).join("");
 }
 function resetRates(){try{if(typeof localStorage!=="undefined")localStorage.removeItem("qt_rates");}catch(e){} const r=quoteRates(); document.getElementById("q_fx").value=r.fx; document.getElementById("q_markup").value=r.markup; document.getElementById("q_lam").value=r.lam; document.getElementById("q_deduct").value=r.deduct; renderRates(); onCalcInput();}
 function calcRow(line,i){
   const tr=document.createElement("tr");
   const rubOpts=QUOTE_RUBBERS.map(r=>`<option value="${r.id}"${r.id===line.rubber?" selected":""}>${r.label} ¥${r.rate}/mm</option>`).join("");
-  const fabOpts=sel=>QUOTE_FABRICS.map(f=>`<option value="${f.id}"${f.id===sel?" selected":""}>${f.label} ¥${f.rate}</option>`).join("");
-  tr.innerHTML=`<td><select onchange="calcChanged(${i},'rubber',this.value)">${rubOpts}</select></td><td><input type="number" step="0.5" value="${line.thick}" oninput="calcChanged(${i},'thick',this.value)"></td><td><select onchange="calcChanged(${i},'fabA',this.value)">${fabOpts(line.fabA)}</select></td><td><select onchange="calcChanged(${i},'fabB',this.value)">${fabOpts(line.fabB)}</select></td><td><input value="${esc(line.size||"50*130")}" oninput="calcChanged(${i},'size',this.value)"></td><td><input type="number" value="${line.qty}" oninput="calcChanged(${i},'qty',this.value)"></td><td class="c" id="cc_cost_${i}"></td><td class="c" id="cc_usd_${i}"></td><td class="c" id="cc_total_${i}"></td><td><button type="button" onclick="removeCalcRow(${i})">✕</button></td>`;
+  const sides=String(line.sides||"2");
+  const faName=fabricLabel(line.fabA), fbName=fabricLabel(line.fabB);
+  const rates=currentRates();
+  const faPrice=(line.fabAprice!=null&&line.fabAprice!=="")?+line.fabAprice:fabricPrice(line.fabA,rates);
+  const fbPrice=(line.fabBprice!=null&&line.fabBprice!=="")?+line.fabBprice:fabricPrice(line.fabB,rates);
+  const dis=sides==="1"?" disabled":"";
+  tr.innerHTML=`<td><select onchange="calcChanged(${i},'rubber',this.value)">${rubOpts}</select></td><td><input type="number" step="0.5" value="${line.thick}" oninput="calcChanged(${i},'thick',this.value)"></td><td><select onchange="calcChanged(${i},'sides',this.value)"><option value="2"${sides!=="1"?" selected":""}>双面</option><option value="1"${sides==="1"?" selected":""}>单面</option></select></td><td><div style="display:flex;gap:3px"><input list="fabricList" id="cc_fabA_${i}" value="${esc(faName)}" oninput="calcChanged(${i},'fabA',this.value)" style="flex:1;min-width:56px"><input type="number" step="0.5" id="cc_fabAprice_${i}" value="${faPrice}" oninput="calcChanged(${i},'fabAprice',this.value)" style="width:56px" title="¥/面"></div></td><td><div style="display:flex;gap:3px"><input list="fabricList" id="cc_fabB_${i}" value="${esc(fbName)}" oninput="calcChanged(${i},'fabB',this.value)" style="flex:1;min-width:56px"${dis}><input type="number" step="0.5" id="cc_fabBprice_${i}" value="${fbPrice}" oninput="calcChanged(${i},'fabBprice',this.value)" style="width:56px" title="¥/面"${dis}></div></td><td><input value="${esc(line.size||"50*130")}" oninput="calcChanged(${i},'size',this.value)"></td><td><input type="number" value="${line.qty}" oninput="calcChanged(${i},'qty',this.value)"></td><td class="c" id="cc_cost_${i}"></td><td class="c" id="cc_usd_${i}"></td><td class="c" id="cc_total_${i}"></td><td style="white-space:nowrap"><button type="button" onclick="pushCalcToProduct(${i})" title="把算出的单价填入产品表（成品名称自己写）">→ 产品</button> <button type="button" onclick="removeCalcRow(${i})">✕</button></td>`;
   return tr;
 }
 function renderCalc(){
@@ -891,35 +931,86 @@ function updateCalcCells(){
 }
 function calcChanged(i,field,val){
   if(!CALC[i])return;
-  CALC[i][field]=(field==="thick"||field==="qty")?+val||0:val;
-  updateCalcCells(); syncCalcToProducts(); render();
+  if(field==="thick"||field==="qty"||field==="fabAprice"||field==="fabBprice"){CALC[i][field]=+val||0;}
+  else if(field==="sides"){
+    CALC[i][field]=String(val);
+    const dis=String(val)==="1";
+    const na=document.getElementById("cc_fabB_"+i), pr=document.getElementById("cc_fabBprice_"+i);
+    if(na)na.disabled=dis;
+    if(pr)pr.disabled=dis;
+  }
+  else{CALC[i][field]=val;}
+  if(field==="fabA"||field==="fabB"){
+    const r=currentRates();
+    const f=QUOTE_FABRICS.find(x=>x.label===String(val).trim());
+    const pf=field==="fabA"?"fabAprice":"fabBprice";
+    if(f&&r.fabric[f.id]!=null){
+      CALC[i][pf]=+r.fabric[f.id];
+      const pel=document.getElementById("cc_"+pf+"_"+i);
+      if(pel)pel.value=CALC[i][pf];
+    }
+  }
+  updateCalcCells(); render();
 }
-function onCalcInput(){updateCalcCells(); syncCalcToProducts(); render();}
-function addCalcRow(){CALC.push({rubber:"SBR9",thick:5,fabA:"TBLK",fabB:"TBLK",size:"50*130",qty:20}); renderCalc(); syncCalcToProducts(); render();}
-function removeCalcRow(i){CALC.splice(i,1); renderCalc(); syncCalcToProducts(); render();}
-function syncCalcToProducts(){
+function onCalcInput(){updateCalcCells(); render();}
+function addCalcRow(){CALC.push(defaultCalcLine()); renderCalc(); render();}
+function removeCalcRow(i){CALC.splice(i,1); renderCalc(); render();}
+/* Calc lines price the sheet (material); product rows price the finished product.
+   They are NOT the same: a calc line never writes the product table by itself.
+   "→ 产品" copies the calc line's USD price + qty into a product row (creating
+   one, or updating the row that line already filled); the finished-product
+   name stays the user's own text. */
+function defaultCalcLine(){
+  let p=13;
+  try{const r=currentRates(); if(r.fabric&&r.fabric.TBLK!=null)p=+r.fabric.TBLK;}catch(e){}
+  return{rubber:"SBR9",thick:5,sides:"2",fabA:"T布(黑色)",fabAprice:p,fabB:"T布(黑色)",fabBprice:p,size:"50*130",qty:20};
+}
+function normalizeCalcLine(c){
+  c=c||{};
   const rates=currentRates();
-  const body=document.getElementById("prod_body");
-  [...body.querySelectorAll("tr")].forEach(tr=>{const ci=tr.dataset.calcIdx; if(ci!==undefined&&ci!==""&&+ci>=CALC.length)tr.remove();});
+  return{
+    rubber:c.rubber||"SBR9",
+    thick:+c.thick||5,
+    sides:String(c.sides||"2"),
+    fabA:fabricLabel(c.fabA)||"T布(黑色)",
+    fabAprice:(c.fabAprice!=null&&c.fabAprice!=="")?+c.fabAprice:fabricPrice(c.fabA,rates),
+    fabB:fabricLabel(c.fabB)||"T布(黑色)",
+    fabBprice:(c.fabBprice!=null&&c.fabBprice!=="")?+c.fabBprice:fabricPrice(c.fabB,rates),
+    size:c.size||"50*130",
+    qty:+c.qty||0,
+    lam:(c.lam!=null)?+c.lam:undefined
+  };
+}
+function pushCalcToProduct(i){
+  const line=CALC[i]; if(!line)return;
+  const r=calcQuoteLine(line,currentRates());
+  let tr=(line._prodEl&&line._prodEl.isConnected)?line._prodEl:null;
+  if(!tr){
+    prodRow({desc:"Neoprene Sheet "+(+line.thick||0)+"mm",thick:(+line.thick||0)+"MM",hs:"39269090",qty:line.qty,unit:r.usd,sample:0,cartons:1,nw:"",gw:"",dims:""});
+    tr=document.querySelector("#prod_body tr:last-child");
+    line._prodEl=tr;
+  }else{
+    const inp=tr.querySelectorAll("input");
+    inp[3].value=line.qty; inp[4].value=r.usd;
+  }
+  render();
+}
+function linkCalcToProducts(){
+  const rates=currentRates();
+  const rows=[...document.querySelectorAll("#prod_body tr")];
   CALC.forEach((line,i)=>{
     const r=calcQuoteLine(line,rates);
-    let tr=[...body.querySelectorAll("tr")].find(x=>x.dataset.calcIdx===String(i));
-    if(!tr){
-      prodRow({desc:r.desc,thick:line.thick+"MM",hs:"39269090",qty:line.qty,unit:r.usd,sample:0,cartons:1,nw:"",gw:"",dims:""});
-      tr=body.querySelector("tr:last-child");
-      tr.dataset.calcIdx=String(i);
+    const tr=rows[i];
+    if(tr){
+      const inp=tr.querySelectorAll("input");
+      if(Math.abs((+inp[4].value||0)-r.usd)<0.005)line._prodEl=tr;
     }
-    const inp=tr.querySelectorAll("input");
-    const hs=inp[2].value;
-    inp[0].value=r.desc; inp[1].value=line.thick+"MM"; inp[2].value=hs||"39269090";
-    inp[3].value=line.qty; inp[4].value=r.usd; inp[5].value=0;
   });
 }
 function removeProdRow(btn){
   const tr=btn.closest("tr");
-  const ci=tr.dataset&&tr.dataset.calcIdx;
-  if(DOC_TYPE==="QT"&&ci!==undefined&&ci!==""){CALC.splice(+ci,1); renderCalc(); syncCalcToProducts();}
-  else tr.remove();
+  CALC.forEach(line=>{if(line._prodEl===tr)line._prodEl=null;});
+  tr.remove();
   render();
 }
 function initQuote(){
@@ -958,11 +1049,12 @@ function fillForm(s){
   document.getElementById("f_remarks").value=s.remarks||""; document.getElementById("f_lead").value=s.lead||"7-9 DAYS AFTER CONFIRMING THE ORDER."; document.getElementById("f_term").value=s.term||"EXW"; document.getElementById("f_note").value=s.note||"";
   document.getElementById("f_project").value=s.project||""; document.getElementById("f_valid").value=s.validUntil||"";
   document.getElementById("f_pol").value=s.pol||""; document.getElementById("f_pod").value=s.pod||"";
-  CALC=(s.calc&&s.calc.length)?s.calc.map(c=>({rubber:c.rubber||"SBR9",thick:+c.thick||5,fabA:c.fabA||"TBLK",fabB:c.fabB||"TBLK",size:c.size||"50*130",qty:+c.qty||0})):[];
+  CALC=(s.calc&&s.calc.length)?s.calc.map(normalizeCalcLine):[];
   document.getElementById("prod_body").innerHTML=""; document.getElementById("extra_body").innerHTML="";
   setDocType(s.docType||"PI");
-  if(!s.calc||!s.calc.length){(s.products||[]).forEach(prodRow);}
+  (s.products||[]).forEach(prodRow);
   (s.extras||[]).forEach(extraRow);
+  linkCalcToProducts();
   document.querySelector('input[name="bank"][value="HK"]').checked=true; setBankText("HK"); render();
 }
 function loadSample(name){
