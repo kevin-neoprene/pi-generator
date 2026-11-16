@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PI / CI / 装箱单生成器 - Tianchi Technology Co., Ltd.</title>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   *{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f2f3f5;color:#222}
   header{background:#1a3a5c;color:#fff;padding:14px 20px} header h1{margin:0;font-size:20px} header p{margin:4px 0 0;font-size:13px;opacity:.85}
@@ -59,6 +60,12 @@
 </header>
 <div class="wrap">
   <div class="form">
+    <div class="import-box" style="margin-bottom:6px">
+      <strong style="font-size:13px">已有 PI / CI / 装箱单文件？直接导入，自动填表：</strong><br>
+      <button type="button" class="btn ghost" onclick="document.getElementById('f_import').click()">&#128229; 导入 PI / CI / 装箱单 (.xls / .xlsx)</button>
+      <input type="file" id="f_import" accept=".xls,.xlsx" style="display:none" onchange="importPiFile(this.files[0]);this.value=''">
+      <p class="note" id="import_status" style="display:none;margin-top:8px"></p>
+    </div>
     <div class="doc-type" style="margin-bottom:6px">
       <strong style="font-size:13px">单据类型：</strong><br>
       <button type="button" id="dt_PI" class="on" onclick="setDocType('PI')">Proforma Invoice（形式发票）</button>
@@ -76,6 +83,14 @@
       <button type="button" onclick="loadSample('Colonial')">Colonial（澳洲 · 装箱单）</button>
       <button type="button" onclick="resetForm()">清空新建</button>
     </div>
+
+    <h2>公司抬头（卖方信息，可改）</h2>
+    <label>公司名称（印在单据抬头）</label><input id="f_company" list="co_list" value="TIANCHI TECHNOLOGY CO., LTD.">
+    <datalist id="co_list"><option value="TIANCHI TECHNOLOGY CO., LTD."></option><option value="HUNAN TIANCHI POLYMER NEW MATERIAL CO., LTD."></option></datalist>
+    <div class="row2"><div><label>邮箱 EMAIL</label><input id="f_coEmail" value="KEVIN@NEOPRENECUSTOM.COM"></div><div><label>网址 WEB</label><input id="f_coWeb" value="WWW.NEOPRENECUSTOM.COM"></div></div>
+    <div class="row2"><div><label>电话 TEL</label><input id="f_coTel" value="0734-87961816"></div><div><label>传真 FAX</label><input id="f_coFax" value="0734-87961819"></div></div>
+    <div class="row2"><div><label>手机 CEL</label><input id="f_coCel" value="86-13417385320"></div><div><label>FM 联系人</label><input id="f_fmAttn" value="KEVIN"></div></div>
+    <label>地址 ADD</label><textarea id="f_coAddr" rows="2">GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA</textarea>
 
     <h2>客人信息</h2>
     <label>TO（公司 / 客人姓名）</label><input id="f_to" value="">
@@ -161,13 +176,13 @@ const SAMPLES = {
   KAT: {to:"KAT Europe Ltd", tel:"+44 (0)1430 411388", addr:"Riplingham House, Westoby Lane, Riplingham, Cottingham, East Yorkshire, HU20 3XT, UK", pc:"HU20 3XT", attn:"Rick Clark", date:"2026-11-02", ref:"Kevin261102", unit:"USD/Sheet", docType:"PI",
     products:[{desc:"Neoprene Fabric Sheet\nBlack Anti-Snagging Nylon/Sheet / 4.0mm CR Core / Black Anti-Snagging Nylon/Sheet Size:50\" * 130\"",thick:"\u22654.5mm",hs:"40024900",qty:16,unit:49,sample:0}],
     extras:[{label:"Freight Collect",amount:0},{label:"Less Sample Credit Offset",amount:-99.5}], remarks:"", lead:"7-9 DAYS AFTER CONFIRMING THE ORDER.", term:"EXW", bank:"HK"},
-  AYNES: {to:"Marta Aynes", tel:"+34 682 66 38 65", addr:"Rambla Sant Marti 48, 08358 Arenys de Mar, Barcelona, Spain.", pc:"08358", attn:"Marta Aynes", date:"2026-09-28", ref:"Kevin260928", unit:"USD/PC", docType:"CI",
+  AYNES: {company:"HUNAN TIANCHI POLYMER NEW MATERIAL CO., LTD.", to:"Marta Aynes", tel:"+34 682 66 38 65", addr:"Rambla Sant Marti 48, 08358 Arenys de Mar, Barcelona, Spain.", pc:"08358", attn:"Marta Aynes", date:"2026-09-28", ref:"Kevin260928", unit:"USD/PC", docType:"CI",
     products:[{desc:"Neoprene Luggage Protective Cover",thick:"3MM",hs:"39269090",qty:1,unit:0,sample:80,cartons:1,nw:0.5,gw:1,dims:"40x30x10CM"}],
     extras:[{label:"Shipping Cost to Spain",amount:55}], note:"Made in China.", remarks:"", lead:"7-9 DAYS AFTER CONFIRMING THE ORDER.", term:"EXW", bank:"HK"},
-  Sam: {to:"Sam Soni", tel:"+971 58 538 4389", addr:"Rihan Heights B-103, Zayed Sports City, Abu Dhabi, UAE", pc:"", attn:"Sam Soni", date:"2026-09-28", ref:"Kevin260928", unit:"USD/PC", docType:"CI",
+  Sam: {company:"HUNAN TIANCHI POLYMER NEW MATERIAL CO., LTD.", to:"Sam Soni", tel:"+971 58 538 4389", addr:"Rihan Heights B-103, Zayed Sports City, Abu Dhabi, UAE", pc:"", attn:"Sam Soni", date:"2026-09-28", ref:"Kevin260928", unit:"USD/PC", docType:"CI",
     products:[{desc:"Sample of Neoprene Bottle Sleeve (For Testing Only, No Commercial Value)",thick:"4mm",hs:"4016.9990.90",qty:2,unit:0,sample:5,cartons:1,nw:0.2,gw:0.5,dims:"30x20x15CM"}],
     extras:[], note:"Free sample set for quality testing purpose only. No commercial value. Value for customs inspection only.", remarks:"", lead:"7-9 DAYS AFTER CONFIRMING THE ORDER.", term:"EXW", bank:"HK"},
-  Colonial: {to:"Colonial Brands", tel:"+61 8 9242 3322", addr:"Unit 2, 55 Howe Street, Osborne Park, Western Australia, 6017", pc:"6017", attn:"Adam Plowman", date:"2026-03-16", ref:"Kevin260316", unit:"USD/PC", docType:"PL",
+  Colonial: {company:"HUNAN TIANCHI POLYMER NEW MATERIAL CO., LTD.", coCel:"86-132 6717 8261", fmAttn:"KEVIN HO", to:"Colonial Brands", tel:"+61 8 9242 3322", addr:"Unit 2, 55 Howe Street, Osborne Park, Western Australia, 6017", pc:"6017", attn:"Adam Plowman", date:"2026-03-16", ref:"Kevin260316", unit:"USD/PC", docType:"PL",
     products:[{desc:"Neoprene Panel",thick:"",hs:"39269090",qty:500,unit:0,sample:0,cartons:40,nw:14,gw:14.5,dims:"49.5*45.5*43"},{desc:"Neoprene Base",thick:"",hs:"39269090",qty:4000,unit:0,sample:0,cartons:5,nw:13.5,gw:14,dims:"41*60*41"}],
     extras:[], note:"", remarks:"", lead:"7-9 DAYS AFTER CONFIRMING THE ORDER.", term:"EXW", bank:"HK"}
 };
@@ -181,6 +196,101 @@ function parseDims(s){const m=String(s||"").replace(/cm/gi,"").split(/[*x×X]/).
 function calcPacking(data){let q=0,c=0,nw=0,gw=0,vol=0;data.products.forEach(p=>{const ct=+p.cartons||0;const d=parseDims(p.dims);q+=(+p.qty||0)*ct;c+=ct;nw+=(+p.nw||0)*ct;gw+=(+p.gw||0)*ct;if(d)vol+=d.l*d.w*d.h/1000000*ct;});return{qty:q,ctn:c,nw:Math.round(nw*100)/100,gw:Math.round(gw*100)/100,vol:Math.round(vol*1000)/1000};}
 function bankText(data,total){return data.bankText+"\nNote: Please instruct your bank that ALL bank charges (including transfer and intermediate bank fees) are to be paid by the buyer (OUR rate/all fees on buyer's account). The net amount received must be $"+(Math.round(total*100)/100)+" USD.";}
 
+
+function parseDateStr(s){
+  s=String(s==null?"":s).trim().replace(/\./g,"");
+  if(!s) return "";
+  if(/^\d{4,6}$/.test(s)){const n=+s; if(n>30000&&n<60000){const d=new Date(Math.round((n-25569)*86400*1000)); return d.toISOString().slice(0,10);}}
+  let m=s.match(/(\d{1,2})(?:ST|ND|RD|TH)?\s*,?\s*([A-Za-z]{3,9})\s*,?\s*(\d{4})/);
+  if(m){const M={JAN:1,FEB:2,MAR:3,APR:4,MAY:5,JUN:6,JUL:7,AUG:8,SEP:9,OCT:10,NOV:11,DEC:12};const mo=M[m[2].slice(0,3).toUpperCase()];if(mo)return m[3]+"-"+String(mo).padStart(2,"0")+"-"+String(+m[1]).padStart(2,"0");}
+  m=s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m)return m[1]+"-"+String(+m[2]).padStart(2,"0")+"-"+String(+m[3]).padStart(2,"0");
+  return "";
+}
+function _num(v){if(typeof v==="number")return v; if(v==null||v==="")return 0; const n=parseFloat(String(v).replace(/[^0-9.\-]/g,"")); return isNaN(n)?0:n;}
+function _ct(v){return v==null?"":String(v).trim();}
+function _find(rows,pred){for(let r=0;r<rows.length;r++){const row=rows[r]||[];for(let c=0;c<row.length;c++){if(pred(_ct(row[c]),r,c))return{r,c,v:row[c]};}}return null;}
+function parsePiSheet(rows){
+  const d={docType:"PI",company:"",coEmail:"",coWeb:"",coTel:"",coFax:"",coCel:"",coAddr:"",to:"",tel:"",addr:"",pc:"",attn:"",ref:"",date:"",unit:"USD/PC",products:[],extras:[],remarks:"",note:"",fmAttn:"KEVIN"};
+  for(let r=0;r<Math.min(6,rows.length);r++){(rows[r]||[]).forEach(v=>{const s=_ct(v).toUpperCase();if(s.includes("COMMERCIAL INVOICE"))d.docType="CI";else if(s.includes("PACKING LIST"))d.docType="PL";else if(s.includes("PROFORMA INVOICE"))d.docType="PI";});}
+  const r0=rows[0]||[]; for(let c=0;c<r0.length;c++){if(_ct(r0[c])){d.company=_ct(r0[c]);break;}}
+  const line1=(rows[1]||[]).map(_ct).join(" ");
+  let m=line1.match(/EMAIL:\s*(\S+)/i); if(m)d.coEmail=m[1];
+  m=line1.match(/WEB:\s*(\S+)/i); if(m)d.coWeb=m[1];
+  const line2=(rows[2]||[]).map(_ct).join(" ");
+  m=line2.match(/TEL:\s*([0-9+\-() ]+?)(?:\s+FAX:|\s*$)/i); if(m)d.coTel=m[1].trim();
+  m=line2.match(/FAX:\s*([0-9+\-() ]+?)(?:\s+CEL:|\s*$)/i); if(m)d.coFax=m[1].trim();
+  m=line2.match(/CEL:\s*(.+)$/i); if(m)d.coCel=m[1].trim();
+  const line3=(rows[3]||[]).map(_ct).join(" ");
+  m=line3.match(/ADD:\s*(.+)$/i); if(m)d.coAddr=m[1].trim();
+  const toC=_find(rows,s=>s==="TO:");
+  if(toC){const row=rows[toC.r]||[]; for(let c=toC.c+1;c<row.length;c++){if(_ct(row[c])){d.to=_ct(row[c]);break;}}
+    const telC=row.find(v=>/TEL:/i.test(_ct(v))); if(telC)d.tel=_ct(telC).replace(/TEL:\s*/i,"").trim();}
+  const addC=_find(rows,s=>s==="ADD:");
+  if(addC){const row=rows[addC.r]||[]; for(let c=addC.c+1;c<row.length;c++){if(_ct(row[c])){d.addr=_ct(row[c]);break;}}
+    const pcC=row.find(v=>/P\.C\./i.test(_ct(v))); if(pcC)d.pc=_ct(pcC).replace(/P\.C\.:\s*/i,"").trim();}
+  const attns=[]; rows.forEach((row,r)=>{(row||[]).forEach((v,c)=>{if(_ct(v)==="ATTN:")attns.push({r,c});});});
+  if(attns.length>=1){const a=attns[0]; const row=rows[a.r]||[]; for(let c=a.c+1;c<row.length;c++){if(_ct(row[c])){d.attn=_ct(row[c]);break;}}}
+  if(attns.length>=2){const a=attns[1]; const row=rows[a.r]||[]; for(let c=a.c+1;c<row.length;c++){if(_ct(row[c])){d.fmAttn=_ct(row[c]);break;}}}
+  const refC=_find(rows,s=>/REF\s*NO/i.test(s));
+  if(refC){const mm=_ct(refC.v).match(/REF\s*NO\.?:?\s*(.+)$/i); if(mm)d.ref=mm[1].trim();}
+  const dateC=_find(rows,s=>/^DATE/i.test(s));
+  if(dateC){const mm=_ct(dateC.v).match(/DATE\s*:?\s*(.+)$/i); if(mm)d.date=parseDateStr(mm[1]);}
+  let hr=-1; const cols={};
+  for(let r=0;r<rows.length;r++){const row=(rows[r]||[]).map(_ct);
+    const hasPN=row.some(s=>s==="P/N"), hasItem=row.some(s=>/^Item$/i.test(s));
+    if(!hasPN&&!hasItem)continue;
+    hr=r;
+    row.forEach((s,c)=>{const u=s.toUpperCase().replace(/\n/g," ");
+      if(u==="P/N"||u==="ITEM")cols.pn=c;
+      if(u.includes("PRODUCT DESCRIPTION")||u==="ITEM")cols.desc=c;
+      if(u.includes("THICKNESS"))cols.thick=c;
+      if(u==="HS CODE")cols.hs=c;
+      if(u.includes("TOTAL QTY"))cols.tQty=c;
+      else if(u.includes("TOTAL WEIGHT"))cols.tWeight=c;
+      else if(u.includes("VOLUME"))cols.vol=c;
+      else if(u.includes("QTY")&&u.includes("CTN"))cols.qtyCtn=c;
+      else if(u.includes("QUANTITY")||u.includes("QTY"))cols.qty=c;
+      if(u.includes("UNIT PRICE")){cols.unit=c; const mm2=s.match(/\(([^)]+)\)/); if(mm2)d.unit=mm2[1];}
+      if(u.includes("SAMPLE")&&u.includes("COST"))cols.sample=c;
+      if(u.includes("TOTAL AMOUNT"))cols.total=c;
+      if(u.includes("N.W"))cols.nw=c;
+      if(u.includes("G.W"))cols.gw=c;
+      if(u.includes("CARTON SIZE"))cols.dims=c;
+      if(u==="CARTONS")cols.cartons=c;
+    });
+    break;
+  }
+  if(hr>=0){
+    if(cols.qtyCtn!=null)d.docType="PL";
+    for(let r=hr+1;r<rows.length;r++){
+      const row=rows[r]||[];
+      const fi=row.findIndex(v=>_ct(v)!=="");
+      if(fi<0)continue;
+      const firstTxt=_ct(row[fi]);
+      if(/^TOTAL$/i.test(firstTxt))break;
+      if(/^REMARKS:/i.test(firstTxt)){d.remarks=firstTxt.replace(/^REMARKS:\s*/i,"");continue;}
+      if(/^Note:/i.test(firstTxt)){d.note=firstTxt.replace(/^Note:\s*/i,"");continue;}
+      const desc=_ct(row[cols.desc]);
+      if(d.docType==="PL"){
+        if(!desc)continue;
+        d.products.push({desc,thick:"",hs:_ct(row[cols.hs]),qty:_num(row[cols.qtyCtn]),unit:0,sample:0,nw:_num(row[cols.nw]),gw:_num(row[cols.gw]),dims:_ct(row[cols.dims]),cartons:_num(row[cols.cartons])});
+      }else{
+        if(!desc){
+          const amtCell=_ct(row[cols.total]);
+          if(firstTxt&&amtCell!=="")d.extras.push({label:firstTxt,amount:_num(row[cols.total])});
+          continue;
+        }
+        d.products.push({desc,thick:_ct(row[cols.thick]),hs:_ct(row[cols.hs]),qty:_num(row[cols.qty]),unit:_num(row[cols.unit]),sample:_num(row[cols.sample]),nw:0,gw:0,dims:"",cartons:1});
+      }
+    }
+    for(let r=hr+1;r<rows.length;r++){const row=rows[r]||[];const f=row.find(v=>_ct(v)!=="");const t=f==null?"":_ct(f);
+      if(/^REMARKS:/i.test(t))d.remarks=t.replace(/^REMARKS:\s*/i,"");
+      if(/^Note:/i.test(t))d.note=t.replace(/^Note:\s*/i,"");}
+  }
+  if(!d.ref&&d.date)d.ref=refFromDate(d.date);
+  return d;
+}
 function buildPiWorkbook(data, ExcelJS){
   const dt=data.docType||"PI";
   const title=docTitle(dt);
@@ -210,10 +320,10 @@ function buildPiWorkbook(data, ExcelJS){
   const MONEY='"$"#,##0.00';
   const NUM2='#,##0.00';
   if(dt!=="PL"){
-    ws.getRow(1).height=24; merge("B1:H1","TIANCHI TECHNOLOGY CO., LTD.",F18B,CTR,lt); put("I1","",F10,CTR,rt);
-    ws.getRow(2).height=16.5; merge("B2:H2","EMAIL: KEVIN@NEOPRENECUSTOM.COM     WEB: WWW.NEOPRENECUSTOM.COM",F10,CTR,lft); put("I2","",F10,CTR,rgt);
-    ws.getRow(3).height=19.5; merge("B3:H3","TEL:0734-87961816  FAX: 0734-87961819  CEL:86-13417385320",F10,CTR,lft); put("I3","",F10,CTR,rgt);
-    ws.getRow(4).height=19.5; merge("B4:H4","ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA",F9,CTR,lft); put("I4","",F10,CTR,rgt);
+    ws.getRow(1).height=24; merge("B1:H1",data.company,F18B,CTR,lt); put("I1","",F10,CTR,rt);
+    ws.getRow(2).height=16.5; merge("B2:H2","EMAIL: "+data.coEmail+"     WEB: "+data.coWeb,F10,CTR,lft); put("I2","",F10,CTR,rgt);
+    ws.getRow(3).height=19.5; merge("B3:H3","TEL:"+data.coTel+"  FAX: "+data.coFax+"  CEL:"+data.coCel,F10,CTR,lft); put("I3","",F10,CTR,rgt);
+    ws.getRow(4).height=19.5; merge("B4:H4","ADD: "+data.coAddr,F9,CTR,lft); put("I4","",F10,CTR,rgt);
   }
   let row;
   if(dt==="PL"){
@@ -221,17 +331,17 @@ function buildPiWorkbook(data, ExcelJS){
     const mLT={left:med,top:med}, mL={left:med}, mLB={left:med,bottom:med};
     const mRT={right:med,top:med}, mR={right:med}, mRB={right:med,bottom:med};
     const F20B={name:"Arial",size:20,bold:true}, F11={name:"Arial",size:11}, F11B={name:"Arial",size:11,bold:true};
-    ws.getRow(1).height=24; put("A1","",F10,CTR,mLT); merge("B1:J1","TIANCHI TECHNOLOGY CO., LTD.",F20B,CTR,{top:med,right:med});
-    ws.getRow(2).height=30; put("A2","",F10,CTR,mL); merge("B2:J2","EMAIL: KEVIN@NEOPRENECUSTOM.COM     WEB: WWW.NEOPRENECUSTOM.COM",F10,CTR,mR);
-    ws.getRow(3).height=19.5; put("A3","",F10,CTR,mL); merge("B3:J3","TEL:0734-87961816  FAX: 0734-87961819  CEL:86-13417385320",F10,CTR,mR);
-    ws.getRow(4).height=19.5; put("A4","",F10,CTR,mLB); merge("B4:J4","ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA",F9,CTR,mRB);
+    ws.getRow(1).height=24; put("A1","",F10,CTR,mLT); merge("B1:J1",data.company,F20B,CTR,{top:med,right:med});
+    ws.getRow(2).height=30; put("A2","",F10,CTR,mL); merge("B2:J2","EMAIL: "+data.coEmail+"     WEB: "+data.coWeb,F10,CTR,mR);
+    ws.getRow(3).height=19.5; put("A3","",F10,CTR,mL); merge("B3:J3","TEL:"+data.coTel+"  FAX: "+data.coFax+"  CEL:"+data.coCel,F10,CTR,mR);
+    ws.getRow(4).height=19.5; put("A4","",F10,CTR,mLB); merge("B4:J4","ADD: "+data.coAddr,F9,CTR,mRB);
     ws.getRow(5).height=19.5; merge("A5:J5","PACKING LIST",F18B,CTR,{left:med,right:med});
     ws.getRow(6).height=18; put("A6","TO:",F11,{vertical:"middle"},{left:med,top:thin,right:thin}); merge("B6:G6",data.to,F11,LFT,{top:thin}); put("H6","",F11,LFT,{left:thin,right:thin,top:thin}); merge("I6:J6","TEL: "+data.tel,F11,LFT,{top:thin,right:med});
     ws.getRow(7).height=18; put("A7","ADD:",F11,{vertical:"middle"},{left:med,right:thin}); merge("B7:H7",data.addr,F11,LFT,{}); merge("I7:J7","P.C.: "+data.pc,F11,LFT,{right:med});
     ws.getRow(8).height=18; put("A8","ATTN:",F11,{vertical:"middle"},{left:med,bottom:thin,right:thin}); merge("B8:G8",data.attn,F11,LFT,{bottom:thin}); put("H8","",F11,LFT,{left:thin,right:thin,bottom:thin}); merge("I8:J8","",F11,LFT,{bottom:thin,right:med});
     ws.getRow(9).height=18; merge("A9:J9","",F11,LFT,{left:med,right:med});
-    ws.getRow(10).height=18; put("A10","FM:",F11,{vertical:"middle"},{left:med,top:thin,right:thin}); merge("B10:G10","TIANCHI TECHNOLOGY CO., LTD.",F11,LFT,{top:thin}); put("H10","",F11,LFT,{left:thin,right:thin,top:thin}); merge("I10:J10","REF NO.:"+data.ref,F11,LFT,{top:thin,right:med});
-    ws.getRow(11).height=18; put("A11","ATTN:",F11,{vertical:"middle"},{left:med,bottom:thin,right:thin}); merge("B11:G11","KEVIN",F11,LFT,{bottom:thin}); put("H11","",F11,LFT,{left:thin,right:thin,bottom:thin}); merge("I11:J11","DATE:"+dateStr(data.date),F11,LFT,{bottom:thin,right:med});
+    ws.getRow(10).height=18; put("A10","FM:",F11,{vertical:"middle"},{left:med,top:thin,right:thin}); merge("B10:G10",data.company,F11,LFT,{top:thin}); put("H10","",F11,LFT,{left:thin,right:thin,top:thin}); merge("I10:J10","REF NO.:"+data.ref,F11,LFT,{top:thin,right:med});
+    ws.getRow(11).height=18; put("A11","ATTN:",F11,{vertical:"middle"},{left:med,bottom:thin,right:thin}); merge("B11:G11",data.fmAttn,F11,LFT,{bottom:thin}); put("H11","",F11,LFT,{left:thin,right:thin,bottom:thin}); merge("I11:J11","DATE:"+dateStr(data.date),F11,LFT,{bottom:thin,right:med});
     ws.getRow(12).height=45;
     const hL={left:med,right:thin,top:thin,bottom:thin}, hM={left:thin,right:thin,top:thin,bottom:thin}, hR={left:thin,right:med,top:thin,bottom:thin};
     [["A12","Item",hL],["B12","HS CODE",hM],["C12","QTY/CTN\n(PCS)",hM],["D12","N.W./CTN\n(KGS)",hM],["E12","G.W./CTN\n(KGS)",hM],["F12","CARTON SIZE\n(CM)",hM],["G12","CARTONS",hM],["H12","TOTAL QTY\n(PCS)",hM],["I12","TOTAL WEIGHT\n(KG)",hM],["J12","VOLUME\n(M3)",hR]].forEach(([c,v,b])=>put(c,v,F11B,CTR,b));
@@ -262,8 +372,8 @@ function buildPiWorkbook(data, ExcelJS){
     ws.getRow(7).height=18; put("B7","ADD:",F10,{vertical:"middle"},{left:thin}); merge("C7:G7",data.addr,F10,LFT,all); merge("H7:I7","P.C.: "+data.pc,F10,LFT,mid);
     ws.getRow(8).height=18; put("B8","ATTN:",F10,{vertical:"middle"},{left:thin,bottom:thin}); merge("C8:G8",data.attn,F10,LFT,all); merge("H8:I8","",F10,LFT,bot);
     ws.getRow(9).height=18; merge("B9:I9","",F10,LFT,mid);
-    ws.getRow(10).height=18; put("B10","FM:",F10,{vertical:"middle"},{left:thin,top:thin}); merge("C10:G10","TIANCHI TECHNOLOGY CO., LTD.",F10,LFT,top); merge("H10:I10","REF NO.:"+data.ref,F10,LFT,top);
-    ws.getRow(11).height=18; put("B11","ATTN:",F10,{vertical:"middle"},{left:thin,bottom:thin}); merge("C11:G11","KEVIN",F10,LFT,bot); merge("H11:I11","DATE:"+dateStr(data.date),F10,LFT,bot);
+    ws.getRow(10).height=18; put("B10","FM:",F10,{vertical:"middle"},{left:thin,top:thin}); merge("C10:G10",data.company,F10,LFT,top); merge("H10:I10","REF NO.:"+data.ref,F10,LFT,top);
+    ws.getRow(11).height=18; put("B11","ATTN:",F10,{vertical:"middle"},{left:thin,bottom:thin}); merge("C11:G11",data.fmAttn,F10,LFT,bot); merge("H11:I11","DATE:"+dateStr(data.date),F10,LFT,bot);
     ws.getRow(12).height=30;
     row=13; const first=row;
     [["B12","P/N"],["C12","PRODUCT DESCRIPTION"],["D12","Thickness(MM)"],["E12","HS CODE"],["F12","QUANTITY\n(PCS)"],["G12","UNIT PRICE\n("+data.unit+")"],["H12","Sample Cost(USD)"],["I12","TOTAL AMOUNT(USD)"]].forEach(([c,v])=>put(c,v,F10B,CTR,all));
@@ -296,7 +406,7 @@ function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"
 function collect(){
   const products=[...document.querySelectorAll("#prod_body tr")].map(tr=>{const i=tr.querySelectorAll("input");return{desc:i[0].value,thick:i[1].value,hs:i[2].value,qty:+i[3].value||0,unit:+i[4].value||0,sample:+i[5].value||0,nw:+i[6].value||0,gw:+i[7].value||0,dims:i[8].value,cartons:+i[9].value||0};}).filter(p=>p.desc.trim()!=="");
   const extras=[...document.querySelectorAll("#extra_body tr")].map(tr=>{const i=tr.querySelectorAll("input");return{label:i[0].value,amount:+i[1].value||0};}).filter(e=>e.label.trim()!=="");
-  return{docType:DOC_TYPE,note:document.getElementById("f_note").value,to:document.getElementById("f_to").value,tel:document.getElementById("f_tel").value,addr:document.getElementById("f_addr").value,pc:document.getElementById("f_pc").value,attn:document.getElementById("f_attn").value,date:document.getElementById("f_date").value||new Date().toISOString().slice(0,10),ref:document.getElementById("f_ref").value,unit:document.getElementById("f_unit").value,products,extras,remarks:document.getElementById("f_remarks").value,term:document.getElementById("f_term").value,lead:document.getElementById("f_lead").value,pay:document.getElementById("f_pay").value,bankText:document.getElementById("f_bank").value};
+  return{docType:DOC_TYPE,company:document.getElementById("f_company").value,coEmail:document.getElementById("f_coEmail").value,coWeb:document.getElementById("f_coWeb").value,coTel:document.getElementById("f_coTel").value,coFax:document.getElementById("f_coFax").value,coCel:document.getElementById("f_coCel").value,coAddr:document.getElementById("f_coAddr").value,fmAttn:document.getElementById("f_fmAttn").value,note:document.getElementById("f_note").value,to:document.getElementById("f_to").value,tel:document.getElementById("f_tel").value,addr:document.getElementById("f_addr").value,pc:document.getElementById("f_pc").value,attn:document.getElementById("f_attn").value,date:document.getElementById("f_date").value||new Date().toISOString().slice(0,10),ref:document.getElementById("f_ref").value,unit:document.getElementById("f_unit").value,products,extras,remarks:document.getElementById("f_remarks").value,term:document.getElementById("f_term").value,lead:document.getElementById("f_lead").value,pay:document.getElementById("f_pay").value,bankText:document.getElementById("f_bank").value};
 }
 function render(){
   const d=collect(); const total=calcTotal(d); const pk=calcPacking(d);
@@ -306,28 +416,28 @@ function render(){
   const title=docTitle(d.docType);
   const isPL=d.docType==="PL";
   const hb = isPL
-    ? `<tr class="hb"><td class="pl-logo-col"></td><td colspan="9" class="h1 pl-txt">TIANCHI TECHNOLOGY CO., LTD.</td></tr>
-    <tr class="hb"><td class="pl-logo-col"></td><td colspan="9" class="c pl-txt">EMAIL: KEVIN@NEOPRENECUSTOM.COM &nbsp;&nbsp; WEB: WWW.NEOPRENECUSTOM.COM</td></tr>
-    <tr class="hb"><td class="pl-logo-col"></td><td colspan="9" class="c pl-txt">TEL:0734-87961816 &nbsp; FAX: 0734-87961819 &nbsp; CEL:86-13417385320</td></tr>
-    <tr class="hb"><td class="pl-logo-col"></td><td colspan="9" class="c pl-txt" style="font-size:11px">ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA</td></tr>`
-    : `<tr class="hb"><td colspan="7" class="h1">TIANCHI TECHNOLOGY CO., LTD.</td><td colspan="1" class="gap"></td></tr>
-    <tr class="hb"><td colspan="7" class="c">EMAIL: KEVIN@NEOPRENECUSTOM.COM &nbsp;&nbsp; WEB: WWW.NEOPRENECUSTOM.COM</td><td colspan="1" class="gap"></td></tr>
-    <tr class="hb"><td colspan="7" class="c">TEL:0734-87961816 &nbsp; FAX: 0734-87961819 &nbsp; CEL:86-13417385320</td><td colspan="1" class="gap"></td></tr>
-    <tr class="hb"><td colspan="7" class="c" style="font-size:11px">ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA</td><td colspan="1" class="gap"></td></tr>`;
+    ? `<tr class="hb"><td class="pl-logo-col"></td><td colspan="9" class="h1 pl-txt">${esc(d.company)}</td></tr>
+    <tr class="hb"><td class="pl-logo-col"></td><td colspan="9" class="c pl-txt">EMAIL: ${esc(d.coEmail)} &nbsp;&nbsp; WEB: ${esc(d.coWeb)}</td></tr>
+    <tr class="hb"><td class="pl-logo-col"></td><td colspan="9" class="c pl-txt">TEL:${esc(d.coTel)} &nbsp; FAX: ${esc(d.coFax)} &nbsp; CEL:${esc(d.coCel)}</td></tr>
+    <tr class="hb"><td class="pl-logo-col"></td><td colspan="9" class="c pl-txt" style="font-size:11px">ADD: ${esc(d.coAddr)}</td></tr>`
+    : `<tr class="hb"><td colspan="7" class="h1">${esc(d.company)}</td><td colspan="1" class="gap"></td></tr>
+    <tr class="hb"><td colspan="7" class="c">EMAIL: ${esc(d.coEmail)} &nbsp;&nbsp; WEB: ${esc(d.coWeb)}</td><td colspan="1" class="gap"></td></tr>
+    <tr class="hb"><td colspan="7" class="c">TEL:${esc(d.coTel)} &nbsp; FAX: ${esc(d.coFax)} &nbsp; CEL:${esc(d.coCel)}</td><td colspan="1" class="gap"></td></tr>
+    <tr class="hb"><td colspan="7" class="c" style="font-size:11px">ADD: ${esc(d.coAddr)}</td><td colspan="1" class="gap"></td></tr>`;
   const span = isPL?10:8;
   const buyer = isPL
     ? `<tr><td>TO:</td><td colspan="6">${esc(d.to)}</td><td></td><td colspan="2">TEL: ${esc(d.tel)}</td></tr>
     <tr><td>ADD:</td><td colspan="7">${esc(d.addr)}</td><td colspan="2">P.C.: ${esc(d.pc)}</td></tr>
     <tr><td>ATTN:</td><td colspan="6">${esc(d.attn)}</td><td></td><td colspan="2"></td></tr>
     <tr><td colspan="10">&nbsp;</td></tr>
-    <tr><td>FM:</td><td colspan="6">TIANCHI TECHNOLOGY CO., LTD.</td><td></td><td colspan="2">REF NO.:${esc(d.ref)}</td></tr>
-    <tr><td>ATTN:</td><td colspan="6">KEVIN</td><td></td><td colspan="2">DATE:${esc(dateStr(d.date))}</td></tr>`
+    <tr><td>FM:</td><td colspan="6">${esc(d.company)}</td><td></td><td colspan="2">REF NO.:${esc(d.ref)}</td></tr>
+    <tr><td>ATTN:</td><td colspan="6">${esc(d.fmAttn)}</td><td></td><td colspan="2">DATE:${esc(dateStr(d.date))}</td></tr>`
     : `<tr><td>TO:</td><td colspan="4">${esc(d.to)}</td><td colspan="3">TEL: ${esc(d.tel)}</td></tr>
     <tr><td>ADD:</td><td colspan="4">${esc(d.addr)}</td><td colspan="3">P.C.: ${esc(d.pc)}</td></tr>
     <tr><td>ATTN:</td><td colspan="7">${esc(d.attn)}</td></tr>
     <tr><td colspan="8">&nbsp;</td></tr>
-    <tr><td>FM:</td><td colspan="4">TIANCHI TECHNOLOGY CO., LTD.</td><td colspan="3">REF NO.:${esc(d.ref)}</td></tr>
-    <tr><td>ATTN:</td><td colspan="4">KEVIN</td><td colspan="3">DATE:${esc(dateStr(d.date))}</td></tr>`;
+    <tr><td>FM:</td><td colspan="4">${esc(d.company)}</td><td colspan="3">REF NO.:${esc(d.ref)}</td></tr>
+    <tr><td>ATTN:</td><td colspan="4">${esc(d.fmAttn)}</td><td colspan="3">DATE:${esc(dateStr(d.date))}</td></tr>`;
   let head, bodyRows, totalRow, tail="";
   if(isPL){
     head=`<tr><th>Item</th><th>HS CODE</th><th>QTY/CTN (PCS)</th><th>N.W./CTN (KGS)</th><th>G.W./CTN (KGS)</th><th>CARTON SIZE (CM)</th><th>CARTONS</th><th>TOTAL QTY (PCS)</th><th>TOTAL WEIGHT (KG)</th><th>VOLUME (M3)</th></tr>`;
@@ -396,20 +506,48 @@ function saveUsBank(){
   const u={name:document.getElementById("us_name").value,acct:document.getElementById("us_acct").value,bank:document.getElementById("us_bank").value,addr:document.getElementById("us_addr").value,swift:document.getElementById("us_swift").value};
   localStorage.setItem("pi_us_bank",JSON.stringify(u)); setBankText("US"); alert("美国账户已保存，下次选美国账户就自动带出来。");
 }
-function loadSample(name){
-  const s=SAMPLES[name]; if(!s) return;
-  document.getElementById("f_to").value=s.to; document.getElementById("f_tel").value=s.tel; document.getElementById("f_addr").value=s.addr;
-  document.getElementById("f_pc").value=s.pc; document.getElementById("f_attn").value=s.attn; document.getElementById("f_date").value=s.date;
-  document.getElementById("f_ref").value=s.ref; document.getElementById("f_unit").value=s.unit;
-  document.getElementById("f_remarks").value=s.remarks; document.getElementById("f_lead").value=s.lead; document.getElementById("f_term").value=s.term; document.getElementById("f_note").value=s.note||"";
+function fillForm(s){
+  document.getElementById("f_company").value=s.company||"TIANCHI TECHNOLOGY CO., LTD.";
+  document.getElementById("f_coEmail").value=s.coEmail||"KEVIN@NEOPRENECUSTOM.COM";
+  document.getElementById("f_coWeb").value=s.coWeb||"WWW.NEOPRENECUSTOM.COM";
+  document.getElementById("f_coTel").value=s.coTel||"0734-87961816";
+  document.getElementById("f_coFax").value=s.coFax||"0734-87961819";
+  document.getElementById("f_coCel").value=s.coCel||"86-13417385320";
+  document.getElementById("f_coAddr").value=s.coAddr||"GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA";
+  document.getElementById("f_fmAttn").value=s.fmAttn||"KEVIN";
+  document.getElementById("f_to").value=s.to||""; document.getElementById("f_tel").value=s.tel||""; document.getElementById("f_addr").value=s.addr||"";
+  document.getElementById("f_pc").value=s.pc||""; document.getElementById("f_attn").value=s.attn||""; document.getElementById("f_date").value=s.date||"";
+  document.getElementById("f_ref").value=s.ref||""; document.getElementById("f_unit").value=s.unit||"USD/PC";
+  document.getElementById("f_remarks").value=s.remarks||""; document.getElementById("f_lead").value=s.lead||"7-9 DAYS AFTER CONFIRMING THE ORDER."; document.getElementById("f_term").value=s.term||"EXW"; document.getElementById("f_note").value=s.note||"";
   setDocType(s.docType||"PI");
-  document.getElementById("prod_body").innerHTML=""; s.products.forEach(prodRow);
-  document.getElementById("extra_body").innerHTML=""; s.extras.forEach(extraRow);
+  document.getElementById("prod_body").innerHTML=""; (s.products||[]).forEach(prodRow);
+  document.getElementById("extra_body").innerHTML=""; (s.extras||[]).forEach(extraRow);
   document.querySelector('input[name="bank"][value="HK"]').checked=true; setBankText("HK"); render();
+}
+function loadSample(name){
+  const s=SAMPLES[name]; if(!s) return; fillForm(s);
+}
+async function importPiFile(file){
+  if(!file) return;
+  const st=document.getElementById("import_status"); st.style.display="none";
+  if(typeof XLSX==="undefined"){alert("导入组件还没加载好，请刷新页面再试一次。");return;}
+  try{
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:"array"});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+    const d=parsePiSheet(rows);
+    if(!d.products.length){alert("这个文件里没读到产品行，请确认是 PI / CI / 装箱单的 Excel 文件。");return;}
+    fillForm(d);
+    st.textContent="已导入："+(d.to||"")+"，"+d.products.length+" 个产品（"+docTitle(d.docType)+"），请核对后下载。";
+    st.style.display="block";
+  }catch(e){console.error(e); alert("导入失败："+(e&&e.message?e.message:e));}
 }
 function resetForm(){
   document.getElementById("f_to").value=""; document.getElementById("f_tel").value=""; document.getElementById("f_addr").value="";
   document.getElementById("f_pc").value=""; document.getElementById("f_attn").value="";
+  document.getElementById("f_company").value="TIANCHI TECHNOLOGY CO., LTD."; document.getElementById("f_coEmail").value="KEVIN@NEOPRENECUSTOM.COM"; document.getElementById("f_coWeb").value="WWW.NEOPRENECUSTOM.COM";
+  document.getElementById("f_coTel").value="0734-87961816"; document.getElementById("f_coFax").value="0734-87961819"; document.getElementById("f_coCel").value="86-13417385320"; document.getElementById("f_coAddr").value="GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA"; document.getElementById("f_fmAttn").value="KEVIN";
   const today=new Date().toISOString().slice(0,10); document.getElementById("f_date").value=today; document.getElementById("f_ref").value=refFromDate(today);
   document.getElementById("prod_body").innerHTML=""; prodRow(); document.getElementById("extra_body").innerHTML=""; extraRow({label:"",amount:0});
   document.getElementById("f_remarks").value=""; document.getElementById("f_lead").value="7-9 DAYS AFTER CONFIRMING THE ORDER."; document.getElementById("f_note").value=""; setDocType("PI");
@@ -441,19 +579,19 @@ function downloadWord(){
       : (d.note?`<p>Note: ${esc(d.note)}</p>`:"");
   }
   const headTable = d.docType==="PL"
-    ? `<table border="0" cellspacing="0" cellpadding="0" width="100%"><tr><td width="120" valign="top"><img src="${LOGO_DATA_URI}" width="110"></td><td style="text-align:center"><h1 style="text-align:center;margin:0">TIANCHI TECHNOLOGY CO., LTD.</h1><p style="text-align:center">EMAIL: KEVIN@NEOPRENECUSTOM.COM &nbsp; WEB: WWW.NEOPRENECUSTOM.COM<br>TEL:0734-87961816 &nbsp; FAX: 0734-87961819 &nbsp; CEL:86-13417385320<br>ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA</p></td></tr></table>`
-    : `<table border="0" cellspacing="0" cellpadding="0" width="100%"><tr><td style="text-align:center"><h1 style="text-align:center;margin:0">TIANCHI TECHNOLOGY CO., LTD.</h1><p style="text-align:center">EMAIL: KEVIN@NEOPRENECUSTOM.COM &nbsp; WEB: WWW.NEOPRENECUSTOM.COM<br>TEL:0734-87961816 &nbsp; FAX: 0734-87961819 &nbsp; CEL:86-13417385320<br>ADD: GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA</p></td><td width="120" valign="top" align="right"><img src="${LOGO_DATA_URI}" width="110"></td></tr></table>`;
+    ? `<table border="0" cellspacing="0" cellpadding="0" width="100%"><tr><td width="120" valign="top"><img src="${LOGO_DATA_URI}" width="110"></td><td style="text-align:center"><h1 style="text-align:center;margin:0">${esc(d.company)}</h1><p style="text-align:center">EMAIL: ${esc(d.coEmail)} &nbsp; WEB: ${esc(d.coWeb)}<br>TEL:${esc(d.coTel)} &nbsp; FAX: ${esc(d.coFax)} &nbsp; CEL:${esc(d.coCel)}<br>ADD: ${esc(d.coAddr)}</p></td></tr></table>`
+    : `<table border="0" cellspacing="0" cellpadding="0" width="100%"><tr><td style="text-align:center"><h1 style="text-align:center;margin:0">${esc(d.company)}</h1><p style="text-align:center">EMAIL: ${esc(d.coEmail)} &nbsp; WEB: ${esc(d.coWeb)}<br>TEL:${esc(d.coTel)} &nbsp; FAX: ${esc(d.coFax)} &nbsp; CEL:${esc(d.coCel)}<br>ADD: ${esc(d.coAddr)}</p></td><td width="120" valign="top" align="right"><img src="${LOGO_DATA_URI}" width="110"></td></tr></table>`;
   const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${title}</title></head><body style="font-family:Arial">
   ${headTable}
   <h2 style="text-align:center">${title}</h2>
   <p>TO: ${esc(d.to)} &nbsp; TEL: ${esc(d.tel)}<br>ADD: ${esc(d.addr)} &nbsp; P.C.: ${esc(d.pc)}<br>ATTN: ${esc(d.attn)}</p>
-  <p>FM: TIANCHI TECHNOLOGY CO., LTD. &nbsp; REF NO.:${esc(d.ref)}<br>ATTN: KEVIN &nbsp; DATE:${esc(dateStr(d.date))}</p>
+  <p>FM: ${esc(d.company)} &nbsp; REF NO.:${esc(d.ref)}<br>ATTN: ${esc(d.fmAttn)} &nbsp; DATE:${esc(dateStr(d.date))}</p>
   ${table}
   ${foot}</body></html>`;
   const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob(["\ufeff"+html],{type:"application/msword"})); a.download=fileBase()+".doc"; a.click();
 }
 document.getElementById("f_date").addEventListener("change",e=>{document.getElementById("f_ref").value=refFromDate(e.target.value);render();});
-["f_to","f_tel","f_addr","f_pc","f_attn","f_ref","f_unit","f_remarks","f_term","f_lead","f_pay","f_bank","f_note"].forEach(id=>document.getElementById(id).addEventListener("input",render));
+["f_company","f_coEmail","f_coWeb","f_coTel","f_coFax","f_coCel","f_coAddr","f_fmAttn","f_to","f_tel","f_addr","f_pc","f_attn","f_ref","f_unit","f_remarks","f_term","f_lead","f_pay","f_bank","f_note"].forEach(id=>document.getElementById(id).addEventListener("input",render));
 loadSample("Antonio");
 </script>
 </body>
