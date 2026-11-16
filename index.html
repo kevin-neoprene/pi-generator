@@ -113,7 +113,7 @@
 
     <div id="sec_calc" style="display:none">
     <h2>报价计算器（按供应商价目表算）</h2>
-    <p class="note">算价是给<b>片材（原材料）</b>算成本，产品表里填的是<b>成品</b>，两者分开：算价行只算出单价，点「→ 产品」把单价填进产品行，成品名称自己写。成本 = 胶料单价 ×（总厚度 − 面布+胶水）+ 面布 + 贴合费；面布+胶水每面约 0.25mm，<b>双面扣 0.5mm、单面扣 0.25mm</b>，双面两层面布、贴合×2，单面一层面布、贴合×1。面布可以填价目表以外的布（填名字和单价）；胶料硬度（如 9度）不用写进产品描述，写进下面的 Special Notes 备注里。<b>美元单价 = 成本 ÷ 汇率 ×（1 + 加价）</b>。人民币成本只显示在这里，不会出现在发给客户的报价单上。</p>
+    <p class="note">算价是给<b>片材（原材料）</b>算成本，产品表里填的是<b>成品</b>，两者分开：算价行只算出单价，点「→ 产品」把单价填进产品行，成品名称自己写。成本 = 胶料单价 ×（总厚度 − 面布+胶水）+ 面布 + 贴合费；面布+胶水每面约 0.25mm，<b>双面扣 0.5mm、单面扣 0.25mm</b>，双面两层面布、贴合×2，单面一层面布、贴合×1。面布可以填价目表以外的布（填名字和单价）；胶料和面布的价格都会浮动，都能改：改价目表是改默认价，改算价行里那一格是只改这一行，改完自动重算。胶料硬度（如 9度）不用写进产品描述，写进下面的 Special Notes 备注里。<b>美元单价 = 成本 ÷ 汇率 ×（1 + 加价）</b>。人民币成本只显示在这里，不会出现在发给客户的报价单上。</p>
     <div class="row3">
       <div><label>汇率 RMB → USD（人民币 ÷ 汇率）</label><input id="q_fx" type="number" step="0.01" value="6.6" oninput="onCalcInput()"></div>
       <div><label>加价 Markup %</label><input id="q_markup" type="number" step="0.1" value="0" oninput="onCalcInput()"></div>
@@ -128,7 +128,7 @@
       <div class="row2"><div><label>面布+胶水占的厚度 mm（双面默认 0.5，单面按一半算）</label><input id="q_deduct" type="number" step="0.1" value="0.5" oninput="onCalcInput()"></div>
       <div><label>&nbsp;</label><button type="button" class="btn ghost" onclick="resetRates()">恢复供应商默认价目表</button></div></div>
     </details>
-    <table class="edit"><thead><tr><th>胶料</th><th>总厚度 mm</th><th>贴合</th><th>面布 A（名 + ¥/面）</th><th>面布 B（名 + ¥/面）</th><th>尺寸 CM</th><th>数量（片）</th><th>成本 ¥/张</th><th>单价 USD/张</th><th>小计 USD</th><th></th></tr></thead>
+    <table class="edit"><thead><tr><th>胶料（¥/mm)</th><th>总厚度 mm</th><th>贴合</th><th>面布 A（名 + ¥/面）</th><th>面布 B（名 + ¥/面）</th><th>尺寸 CM</th><th>数量（片）</th><th>成本 ¥/张</th><th>单价 USD/张</th><th>小计 USD</th><th></th></tr></thead>
     <tbody id="calc_body"></tbody></table>
     <datalist id="fabricList"></datalist>
     <p style="margin-top:6px"><button type="button" class="btn ghost" onclick="addCalcRow()">+ 加一算价行</button></p>
@@ -221,7 +221,7 @@ const SAMPLES = {
   RickQT: {to:"KAT Europe Ltd", tel:"+44 (0)1430 411388", addr:"Riplingham House, Westoby Lane, Riplingham, Cottingham, East Yorkshire, HU20 3XT, UK", pc:"HU20 3XT", attn:"Rick Clark", date:"2026-11-07", ref:"QT-261107-01", unit:"USD/Sheet", docType:"QT",
     products:[{desc:"Neoprene Sheet 5mm",thick:"5MM",hs:"39269090",qty:20,unit:15.3,sample:0,cartons:1,nw:"",gw:"",dims:""},{desc:"Neoprene Sheet 6mm",thick:"6MM",hs:"39269090",qty:20,unit:17.42,sample:0,cartons:1,nw:"",gw:"",dims:""},{desc:"Neoprene Sheet 7mm",thick:"7MM",hs:"39269090",qty:20,unit:19.55,sample:0,cartons:1,nw:"",gw:"",dims:""}], extras:[], remarks:"Material: SBR 9°, black T-fabric laminated on both sides; sheet size 50×130cm.", note:"", lead:"TO BE CONFIRMED PER ORDER", term:"EXW", bank:"HK",
     project:"Neoprene Sheet Quotation", validUntil:"2026-12-07", pol:"", pod:"",
-    calc:[{rubber:"SBR9",thick:5,sides:"2",fabA:"T布(黑色)",fabAprice:13,fabB:"T布(黑色)",fabBprice:13,size:"50*130",qty:20},{rubber:"SBR9",thick:6,sides:"2",fabA:"T布(黑色)",fabAprice:13,fabB:"T布(黑色)",fabBprice:13,size:"50*130",qty:20},{rubber:"SBR9",thick:7,sides:"2",fabA:"T布(黑色)",fabAprice:13,fabB:"T布(黑色)",fabBprice:13,size:"50*130",qty:20}]}
+    calc:[{rubber:"SBR9",rubberPrice:14,thick:5,sides:"2",fabA:"T布(黑色)",fabAprice:13,fabB:"T布(黑色)",fabBprice:13,size:"50*130",qty:20},{rubber:"SBR9",rubberPrice:14,thick:6,sides:"2",fabA:"T布(黑色)",fabAprice:13,fabB:"T布(黑色)",fabBprice:13,size:"50*130",qty:20},{rubber:"SBR9",rubberPrice:14,thick:7,sides:"2",fabA:"T布(黑色)",fabAprice:13,fabB:"T布(黑色)",fabBprice:13,size:"50*130",qty:20}]}
 };
 function ordinal(n){return n===1?"1ST":n===2?"2ND":n===3?"3RD":n+"TH";}
 function dateStr(iso){const d=new Date(iso+"T00:00:00");const M=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];return ordinal(d.getDate())+","+M[d.getMonth()]+","+d.getFullYear();}
@@ -304,7 +304,7 @@ function calcQuoteLine(line,rates){
   const faces=(String(line.sides||"2")==="1")?1:2;
   const deduct=+rates.deduct||0;
   const core=Math.round((th-deduct*faces/2)*100)/100;
-  const rr=+((rates.rubber||{})[line.rubber]||0);
+  const rr=(line.rubberPrice!=null&&line.rubberPrice!=="")?+line.rubberPrice:+((rates.rubber||{})[line.rubber]||0);
   const fa=(line.fabAprice!=null&&line.fabAprice!=="")?+line.fabAprice:fabricPrice(line.fabA,rates);
   const fb=faces===2?((line.fabBprice!=null&&line.fabBprice!=="")?+line.fabBprice:fabricPrice(line.fabB,rates)):0;
   const lam=+line.lam||+rates.lam||0;
@@ -903,14 +903,15 @@ function renderRates(){
 function resetRates(){try{if(typeof localStorage!=="undefined")localStorage.removeItem("qt_rates");}catch(e){} const r=quoteRates(); document.getElementById("q_fx").value=r.fx; document.getElementById("q_markup").value=r.markup; document.getElementById("q_lam").value=r.lam; document.getElementById("q_deduct").value=r.deduct; renderRates(); onCalcInput();}
 function calcRow(line,i){
   const tr=document.createElement("tr");
-  const rubOpts=QUOTE_RUBBERS.map(r=>`<option value="${r.id}"${r.id===line.rubber?" selected":""}>${r.label} ¥${r.rate}/mm</option>`).join("");
+  const rubOpts=QUOTE_RUBBERS.map(r=>`<option value="${r.id}"${r.id===line.rubber?" selected":""}>${r.label}</option>`).join("");
   const sides=String(line.sides||"2");
-  const faName=fabricLabel(line.fabA), fbName=fabricLabel(line.fabB);
   const rates=currentRates();
+  const rubPrice=(line.rubberPrice!=null&&line.rubberPrice!=="")?+line.rubberPrice:+((rates.rubber||{})[line.rubber]||0);
+  const faName=fabricLabel(line.fabA), fbName=fabricLabel(line.fabB);
   const faPrice=(line.fabAprice!=null&&line.fabAprice!=="")?+line.fabAprice:fabricPrice(line.fabA,rates);
   const fbPrice=(line.fabBprice!=null&&line.fabBprice!=="")?+line.fabBprice:fabricPrice(line.fabB,rates);
   const dis=sides==="1"?" disabled":"";
-  tr.innerHTML=`<td><select onchange="calcChanged(${i},'rubber',this.value)">${rubOpts}</select></td><td><input type="number" step="0.5" value="${line.thick}" oninput="calcChanged(${i},'thick',this.value)"></td><td><select onchange="calcChanged(${i},'sides',this.value)"><option value="2"${sides!=="1"?" selected":""}>双面</option><option value="1"${sides==="1"?" selected":""}>单面</option></select></td><td><div style="display:flex;gap:3px"><input list="fabricList" id="cc_fabA_${i}" value="${esc(faName)}" oninput="calcChanged(${i},'fabA',this.value)" style="flex:1;min-width:56px"><input type="number" step="0.5" id="cc_fabAprice_${i}" value="${faPrice}" oninput="calcChanged(${i},'fabAprice',this.value)" style="width:56px" title="¥/面"></div></td><td><div style="display:flex;gap:3px"><input list="fabricList" id="cc_fabB_${i}" value="${esc(fbName)}" oninput="calcChanged(${i},'fabB',this.value)" style="flex:1;min-width:56px"${dis}><input type="number" step="0.5" id="cc_fabBprice_${i}" value="${fbPrice}" oninput="calcChanged(${i},'fabBprice',this.value)" style="width:56px" title="¥/面"${dis}></div></td><td><input value="${esc(line.size||"50*130")}" oninput="calcChanged(${i},'size',this.value)"></td><td><input type="number" value="${line.qty}" oninput="calcChanged(${i},'qty',this.value)"></td><td class="c" id="cc_cost_${i}"></td><td class="c" id="cc_usd_${i}"></td><td class="c" id="cc_total_${i}"></td><td style="white-space:nowrap"><button type="button" onclick="pushCalcToProduct(${i})" title="把算出的单价填入产品表（成品名称自己写）">→ 产品</button> <button type="button" onclick="removeCalcRow(${i})">✕</button></td>`;
+  tr.innerHTML=`<td><div style="display:flex;gap:3px"><select onchange="calcChanged(${i},'rubber',this.value)" style="flex:1;min-width:70px">${rubOpts}</select><input type="number" step="0.5" id="cc_rubberPrice_${i}" value="${rubPrice}" oninput="calcChanged(${i},'rubberPrice',this.value)" style="width:56px" title="¥/mm"></div></td><td><input type="number" step="0.5" value="${line.thick}" oninput="calcChanged(${i},'thick',this.value)"></td><td><select onchange="calcChanged(${i},'sides',this.value)"><option value="2"${sides!=="1"?" selected":""}>双面</option><option value="1"${sides==="1"?" selected":""}>单面</option></select></td><td><div style="display:flex;gap:3px"><input list="fabricList" id="cc_fabA_${i}" value="${esc(faName)}" oninput="calcChanged(${i},'fabA',this.value)" style="flex:1;min-width:56px"><input type="number" step="0.5" id="cc_fabAprice_${i}" value="${faPrice}" oninput="calcChanged(${i},'fabAprice',this.value)" style="width:56px" title="¥/面"></div></td><td><div style="display:flex;gap:3px"><input list="fabricList" id="cc_fabB_${i}" value="${esc(fbName)}" oninput="calcChanged(${i},'fabB',this.value)" style="flex:1;min-width:56px"${dis}><input type="number" step="0.5" id="cc_fabBprice_${i}" value="${fbPrice}" oninput="calcChanged(${i},'fabBprice',this.value)" style="width:56px" title="¥/面"${dis}></div></td><td><input value="${esc(line.size||"50*130")}" oninput="calcChanged(${i},'size',this.value)"></td><td><input type="number" value="${line.qty}" oninput="calcChanged(${i},'qty',this.value)"></td><td class="c" id="cc_cost_${i}"></td><td class="c" id="cc_usd_${i}"></td><td class="c" id="cc_total_${i}"></td><td style="white-space:nowrap"><button type="button" onclick="pushCalcToProduct(${i})" title="把算出的单价填入产品表（成品名称自己写）">→ 产品</button> <button type="button" onclick="removeCalcRow(${i})">✕</button></td>`;
   return tr;
 }
 function renderCalc(){
@@ -931,7 +932,7 @@ function updateCalcCells(){
 }
 function calcChanged(i,field,val){
   if(!CALC[i])return;
-  if(field==="thick"||field==="qty"||field==="fabAprice"||field==="fabBprice"){CALC[i][field]=+val||0;}
+  if(field==="thick"||field==="qty"||field==="fabAprice"||field==="fabBprice"||field==="rubberPrice"){CALC[i][field]=+val||0;}
   else if(field==="sides"){
     CALC[i][field]=String(val);
     const dis=String(val)==="1";
@@ -940,6 +941,14 @@ function calcChanged(i,field,val){
     if(pr)pr.disabled=dis;
   }
   else{CALC[i][field]=val;}
+  if(field==="rubber"){
+    const r=currentRates();
+    if(r.rubber[val]!=null){
+      CALC[i].rubberPrice=+r.rubber[val];
+      const pel=document.getElementById("cc_rubberPrice_"+i);
+      if(pel)pel.value=CALC[i].rubberPrice;
+    }
+  }
   if(field==="fabA"||field==="fabB"){
     const r=currentRates();
     const f=QUOTE_FABRICS.find(x=>x.label===String(val).trim());
@@ -961,15 +970,16 @@ function removeCalcRow(i){CALC.splice(i,1); renderCalc(); render();}
    one, or updating the row that line already filled); the finished-product
    name stays the user's own text. */
 function defaultCalcLine(){
-  let p=13;
-  try{const r=currentRates(); if(r.fabric&&r.fabric.TBLK!=null)p=+r.fabric.TBLK;}catch(e){}
-  return{rubber:"SBR9",thick:5,sides:"2",fabA:"T布(黑色)",fabAprice:p,fabB:"T布(黑色)",fabBprice:p,size:"50*130",qty:20};
+  let p=13, rp=14;
+  try{const r=currentRates(); if(r.fabric&&r.fabric.TBLK!=null)p=+r.fabric.TBLK; if(r.rubber&&r.rubber.SBR9!=null)rp=+r.rubber.SBR9;}catch(e){}
+  return{rubber:"SBR9",rubberPrice:rp,thick:5,sides:"2",fabA:"T布(黑色)",fabAprice:p,fabB:"T布(黑色)",fabBprice:p,size:"50*130",qty:20};
 }
 function normalizeCalcLine(c){
   c=c||{};
   const rates=currentRates();
   return{
     rubber:c.rubber||"SBR9",
+    rubberPrice:(c.rubberPrice!=null&&c.rubberPrice!=="")?+c.rubberPrice:+((rates.rubber||{})[c.rubber]||0),
     thick:+c.thick||5,
     sides:String(c.sides||"2"),
     fabA:fabricLabel(c.fabA)||"T布(黑色)",
