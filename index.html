@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PI / CI / 装箱单生成器 - Tianchi Technology Co., Ltd.</title>
+<title>PI / CI / 装箱单 / 报价单生成器 - Tianchi Technology Co., Ltd.</title>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
@@ -17,7 +17,7 @@
   label{display:block;font-size:13px;margin:8px 0 3px;color:#444} input,select,textarea{width:100%;padding:7px 9px;border:1px solid #bbb;border-radius:5px;font-size:14px;font-family:inherit}
   textarea{min-height:64px;resize:vertical} .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px} .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
   table.edit{width:100%;border-collapse:collapse;font-size:13px} table.edit th{background:#eef2f6;text-align:left;padding:6px;border:1px solid #ccc}
-  table.edit td{border:1px solid #ccc;padding:3px} table.edit input{border:none;padding:5px;width:100%} table.edit input:focus{outline:2px solid #7fb3e8}
+  table.edit td{border:1px solid #ccc;padding:3px} table.edit input{border:none;padding:5px;width:100%} table.edit input:focus{outline:2px solid #7fb3e8} table.edit select{border:none;padding:5px;width:100%;background:#fff}
   .btn{cursor:pointer;border:none;border-radius:6px;padding:10px 14px;font-size:14px;margin:6px 6px 0 0}
   .primary{background:#1a73e8;color:#fff} .green{background:#188038;color:#fff} .dark{background:#333;color:#fff} .ghost{background:#e8eaed;color:#222}
   .sample-btns button{cursor:pointer;border:1px solid #1a73e8;background:#fff;color:#1a73e8;border-radius:20px;padding:6px 12px;margin:0 6px 6px 0;font-size:13px}
@@ -56,14 +56,14 @@
 </head>
 <body>
 <header>
-  <h1>PI / CI / 装箱单生成器</h1>
+  <h1>PI / CI / 装箱单 / 报价单生成器</h1>
   <p>Tianchi Technology Co., Ltd. &nbsp;·&nbsp; 填参数 → 自动算合计 → 一键出 Excel / PDF / Word（免费，不用注册）</p>
 </header>
 <div class="wrap">
   <div class="form">
     <div class="import-box" style="margin-bottom:6px">
-      <strong style="font-size:13px">已有 PI / CI / 装箱单文件？直接导入，自动填表（Excel 或 PDF）：</strong><br>
-      <button type="button" class="btn ghost" onclick="document.getElementById('f_import').click()">&#128229; 导入 PI / CI / 装箱单 (.xls / .xlsx / .pdf)</button>
+      <strong style="font-size:13px">已有 PI / CI / 装箱单 / 报价单文件？直接导入，自动填表（Excel 或 PDF）：</strong><br>
+      <button type="button" class="btn ghost" onclick="document.getElementById('f_import').click()">&#128229; 导入 PI / CI / 装箱单 / 报价单 (.xls / .xlsx / .pdf)</button>
       <input type="file" id="f_import" accept=".xls,.xlsx,.pdf" style="display:none" onchange="importPiFile(this.files[0]);this.value=''">
       <p class="note" id="import_status" style="display:none;margin-top:8px"></p>
     </div>
@@ -72,6 +72,7 @@
       <button type="button" id="dt_PI" class="on" onclick="setDocType('PI')">Proforma Invoice（形式发票）</button>
       <button type="button" id="dt_CI" onclick="setDocType('CI')">Commercial Invoice（商业发票）</button>
       <button type="button" id="dt_PL" onclick="setDocType('PL')">Packing List（装箱单）</button>
+      <button type="button" id="dt_QT" onclick="setDocType('QT')">Quotation（报价单 · 可算价）</button>
     </div>
     <div class="sample-btns">
       <strong style="font-size:13px">一键加载样本试试：</strong><br>
@@ -82,6 +83,7 @@
       <button type="button" onclick="loadSample('AYNES')">Marta Aynes（西班牙 · CI）</button>
       <button type="button" onclick="loadSample('Sam')">Sam Soni（阿联酋 · CI）</button>
       <button type="button" onclick="loadSample('Colonial')">Colonial（澳洲 · 装箱单）</button>
+      <button type="button" onclick="loadSample('RickQT')">Rick（报价单 · 算价示例）</button>
       <button type="button" onclick="resetForm()">清空新建</button>
     </div>
 
@@ -104,11 +106,39 @@
       <div id="unit_cell"><label>单价单位</label><select id="f_unit"><option>USD/PC</option><option>USD/Sheet</option><option>USD/Set</option><option>USD/Pair</option></select></div>
     </div>
 
+    <div id="sec_qt" style="display:none">
+    <h2>报价单信息</h2>
+    <div class="row2"><div><label>项目 Project</label><input id="f_project" placeholder="例如：Neoprene Sheet Quotation"></div><div><label>有效期至 Valid Until</label><input id="f_valid" type="date"></div></div>
+    </div>
+
+    <div id="sec_calc" style="display:none">
+    <h2>报价计算器（按供应商价目表算）</h2>
+    <p class="note">算法和供应商那张表一致：<b>成本 = 胶料单价 ×（总厚度 − 0.5）+ 面布A + 面布B + 贴合×2</b>，0.5 是两层面布加胶水的厚度；<b>美元单价 = 成本 ÷ 汇率 ×（1 + 加价）</b>。人民币成本只显示在这里，不会出现在发给客户的报价单上。</p>
+    <div class="row3">
+      <div><label>汇率 RMB → USD（人民币 ÷ 汇率）</label><input id="q_fx" type="number" step="0.01" value="6.6" oninput="onCalcInput()"></div>
+      <div><label>加价 Markup %</label><input id="q_markup" type="number" step="0.1" value="0" oninput="onCalcInput()"></div>
+      <div><label>贴合费 ¥/面（默认 6）</label><input id="q_lam" type="number" step="0.1" value="6" oninput="onCalcInput()"></div>
+    </div>
+    <details style="margin:8px 0">
+      <summary style="cursor:pointer;font-size:13px">供应商价目表（人民币含税价，可改；改完自动重算，存在这台浏览器里）</summary>
+      <div class="row2" style="margin-top:8px">
+        <div><label>胶料 ¥/mm</label><div id="q_rubber_rates"></div></div>
+        <div><label>面布 ¥/面</label><div id="q_fabric_rates"></div></div>
+      </div>
+      <div class="row2"><div><label>面布+胶水占的厚度 mm（默认 0.5）</label><input id="q_deduct" type="number" step="0.1" value="0.5" oninput="onCalcInput()"></div>
+      <div><label>&nbsp;</label><button type="button" class="btn ghost" onclick="resetRates()">恢复供应商默认价目表</button></div></div>
+    </details>
+    <table class="edit"><thead><tr><th>胶料</th><th>总厚度 mm</th><th>面布 A</th><th>面布 B</th><th>尺寸 CM</th><th>数量（片）</th><th>成本 ¥/张</th><th>单价 USD/张</th><th>小计 USD</th><th></th></tr></thead>
+    <tbody id="calc_body"></tbody></table>
+    <p style="margin-top:6px"><button type="button" class="btn ghost" onclick="addCalcRow()">+ 加一算价行</button></p>
+    </div>
+
     <h2>产品明细 <button type="button" class="btn ghost" style="padding:4px 10px;margin:0" onclick="addProductRow()">+ 加一行</button></h2>
     <table class="edit"><thead><tr><th style="width:30%">产品描述</th><th class="inv">厚度</th><th>HS CODE</th><th id="th_qty">数量</th><th class="price">单价</th><th class="price">样品费/个</th><th class="pk">每箱净重 KG</th><th class="pk">每箱毛重 KG</th><th class="pk">尺寸 CM</th><th class="pk">箱数</th><th class="subtotal">小计</th><th></th></tr></thead>
     <tbody id="prod_body"></tbody></table>
     <p class="note" id="note_money">小计公式和你原来的一致：<b>小计 =（单价 + 样品费）× 数量</b>。样品单：单价填 0、样品费填每件的费用；大货单：单价填单价、样品费填 0。原来 4 份 PI 里这个公式写得不统一（有的按整行、有的按每件），但按“每件”算，4 份的合计都能对上。</p>
     <p class="note" id="note_pl" style="display:none">装箱单按每箱填：每箱件数、每箱净重 / 毛重、纸箱尺寸、箱数；总件数、总毛重、总体积会自动算（体积 = 长×宽×高×箱数，尺寸例如 49.5*45.5*43）。</p>
+    <p class="note" id="note_qt" style="display:none">下面表格里的单价由上面的计算器算出：改胶料、厚度、面布或数量，单价和合计自动跟着变。人民币成本只在计算器里显示，不会出现在报价单上。</p>
 
     <div id="sec_extras">
     <h2>附加行（运费 / 折扣等） <button type="button" class="btn ghost" style="padding:4px 10px;margin:0" onclick="addExtraRow()">+ 加一行</button></h2>
@@ -118,10 +148,11 @@
 
     <div id="sec_terms">
     <h2>条款</h2>
-    <label>REMARKS（特殊说明，没有可留空）</label><textarea id="f_remarks" rows="2"></textarea>
+    <label id="remarks_label">REMARKS（特殊说明，没有可留空）</label><textarea id="f_remarks" rows="2"></textarea>
     <div class="row2"><div><label>价格条款</label><select id="f_term"><option>EXW</option><option>FOB</option><option>CIF</option><option>DDP</option></select></div>
     <div><label>交货期 LEAD TIME</label><input id="f_lead" value="7-9 DAYS AFTER CONFIRMING THE ORDER."></div></div>
-    <label>付款说明</label><input id="f_pay" value="For new customers, our standard terms are typically TT payment.">
+    <div class="row2" id="qt_ports" style="display:none"><div><label>起运港 Port of loading</label><input id="f_pol"></div><div><label>目的港 Port of destination</label><input id="f_pod"></div></div>
+    <div id="pay_row"><label>付款说明</label><input id="f_pay" value="For new customers, our standard terms are typically TT payment."></div>
     </div>
     <div id="sec_note" style="display:none">
     <h2>备注 NOTE</h2>
@@ -185,14 +216,70 @@ const SAMPLES = {
     extras:[], note:"Free sample set for quality testing purpose only. No commercial value. Value for customs inspection only.", remarks:"", lead:"7-9 DAYS AFTER CONFIRMING THE ORDER.", term:"EXW", bank:"HK"},
   Colonial: {company:"HUNAN TIANCHI POLYMER NEW MATERIAL CO., LTD.", coCel:"86-132 6717 8261", fmAttn:"KEVIN HO", to:"Colonial Brands", tel:"+61 8 9242 3322", addr:"Unit 2, 55 Howe Street, Osborne Park, Western Australia, 6017", pc:"6017", attn:"Adam Plowman", date:"2026-03-16", ref:"Kevin260316", unit:"USD/PC", docType:"PL",
     products:[{desc:"Neoprene Panel",thick:"",hs:"39269090",qty:500,unit:0,sample:0,cartons:40,nw:14,gw:14.5,dims:"49.5*45.5*43"},{desc:"Neoprene Base",thick:"",hs:"39269090",qty:4000,unit:0,sample:0,cartons:5,nw:13.5,gw:14,dims:"41*60*41"}],
-    extras:[], note:"", remarks:"", lead:"7-9 DAYS AFTER CONFIRMING THE ORDER.", term:"EXW", bank:"HK"}
+    extras:[], note:"", remarks:"", lead:"7-9 DAYS AFTER CONFIRMING THE ORDER.", term:"EXW", bank:"HK"},
+  RickQT: {to:"KAT Europe Ltd", tel:"+44 (0)1430 411388", addr:"Riplingham House, Westoby Lane, Riplingham, Cottingham, East Yorkshire, HU20 3XT, UK", pc:"HU20 3XT", attn:"Rick Clark", date:"2026-11-07", ref:"QT-261107-01", unit:"USD/Sheet", docType:"QT",
+    products:[], extras:[], remarks:"", note:"", lead:"TO BE CONFIRMED PER ORDER", term:"EXW", bank:"HK",
+    project:"Neoprene Sheet Quotation", validUntil:"2026-12-07", pol:"", pod:"",
+    calc:[{rubber:"SBR9",thick:5,fabA:"TBLK",fabB:"TBLK",lam:6,size:"50*130",qty:20},{rubber:"SBR9",thick:6,fabA:"TBLK",fabB:"TBLK",lam:6,size:"50*130",qty:20},{rubber:"SBR9",thick:7,fabA:"TBLK",fabB:"TBLK",lam:6,size:"50*130",qty:20}]}
 };
 function ordinal(n){return n===1?"1ST":n===2?"2ND":n===3?"3RD":n+"TH";}
 function dateStr(iso){const d=new Date(iso+"T00:00:00");const M=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];return ordinal(d.getDate())+","+M[d.getMonth()]+","+d.getFullYear();}
 function refFromDate(iso){const d=new Date(iso+"T00:00:00");return "Kevin"+String(d.getFullYear()).slice(2)+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0");}
 function calcTotal(data){let t=0;data.products.forEach(p=>{t+=((+p.unit||0)+(+p.sample||0))*(+p.qty||0);});(data.extras||[]).forEach(e=>{t+=(+e.amount||0);});return Math.round(t*100)/100;}
 function money(n){return "$"+Number(n||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});}
-function docTitle(dt){return dt==="CI"?"COMMERCIAL INVOICE":dt==="PL"?"PACKING LIST":"PROFORMA INVOICE";}
+function docTitle(dt){return dt==="CI"?"COMMERCIAL INVOICE":dt==="PL"?"PACKING LIST":dt==="QT"?"QUOTATION":"PROFORMA INVOICE";}
+/* ---- Quotation calculator: supplier build-up price, RMB cost -> USD EXW ----
+   unit cost (RMB/sheet) = rubber ¥/mm x (total thickness - fabric+glue 0.5mm)
+                           + fabric face A + fabric face B + lamination x 2
+   USD/sheet = cost RMB / fx x (1 + markup). RMB cost never leaves this page:
+   the customer-facing quotation shows USD only. */
+const QUOTE_RUBBERS=[
+ {id:"CR6",label:"CR(6度)",rate:45},
+ {id:"CR9",label:"CR(9度)",rate:48},
+ {id:"SBR9",label:"SBR(9度)",rate:14},
+ {id:"SBR1015",label:"SBR(10-15度)",rate:14},
+ {id:"SBR03",label:"SBR(0-3度)",rate:16},
+ {id:"SCR30",label:"SCR(30%)",rate:21},
+ {id:"SCR50",label:"SCR(50%)",rate:28},
+];
+const QUOTE_FABRICS=[
+ {id:"TBLK",label:"T布(黑色)",rate:13},
+ {id:"TCOL",label:"T布(彩色)",rate:15},
+ {id:"NBLK",label:"N布(黑色)",rate:28},
+ {id:"NCOL",label:"N布(彩色)",rate:30},
+ {id:"JIAJI",label:"佳积布",rate:22},
+ {id:"XIAOZHUAN",label:"小钻布",rate:55},
+ {id:"LOUTI",label:"楼梯布",rate:70},
+ {id:"LUOWEN",label:"螺纹布",rate:160},
+];
+const QUOTE_DEFAULTS={lam:6,deduct:0.5,fx:6.6,markup:0};
+function quoteRates(){
+  let s=null;
+  try{if(typeof localStorage!=="undefined")s=JSON.parse(localStorage.getItem("qt_rates")||"null");}catch(e){}
+  if(s&&s.rubber&&s.fabric)return s;
+  return{rubber:Object.fromEntries(QUOTE_RUBBERS.map(r=>[r.id,r.rate])),fabric:Object.fromEntries(QUOTE_FABRICS.map(f=>[f.id,f.rate])),lam:QUOTE_DEFAULTS.lam,deduct:QUOTE_DEFAULTS.deduct,fx:QUOTE_DEFAULTS.fx,markup:QUOTE_DEFAULTS.markup};
+}
+function quoteDesc(line){
+  const rb=(QUOTE_RUBBERS.find(r=>r.id===line.rubber)||{}).label||line.rubber||"";
+  const fa=(QUOTE_FABRICS.find(f=>f.id===line.fabA)||{}).label||line.fabA||"";
+  const fb=(QUOTE_FABRICS.find(f=>f.id===line.fabB)||{}).label||line.fabB||"";
+  const th=(+line.thick||0);
+  const size=String(line.size||"50*130").replace(/\s+/g,"").toUpperCase();
+  return th+"mm "+rb+"+"+fa+"+"+fb+" "+size+"CM";
+}
+function calcQuoteLine(line,rates){
+  rates=rates||quoteRates();
+  const th=+line.thick||0;
+  const core=Math.round((th-(+rates.deduct||0))*10)/10;
+  const rr=+((rates.rubber||{})[line.rubber]||0);
+  const fa=+((rates.fabric||{})[line.fabA]||0);
+  const fb=+((rates.fabric||{})[line.fabB]||0);
+  const lam=+line.lam||+rates.lam||0;
+  const costRmb=Math.round((rr*core+fa+fb+lam*2)*100)/100;
+  const usd=Math.round(costRmb/(+rates.fx||6.6)*(1+(+rates.markup||0)/100)*100)/100;
+  const qty=+line.qty||0;
+  return{core,costRmb,usd,total:Math.round(usd*qty*100)/100,desc:quoteDesc(line)};
+}
 function parseDims(s){const m=String(s||"").replace(/cm/gi,"").split(/[*x×X]/).map(v=>parseFloat(v.trim())).filter(v=>!isNaN(v));return m.length>=3?{l:m[0],w:m[1],h:m[2]}:null;}
 function calcPacking(data){let q=0,c=0,nw=0,gw=0,vol=0;data.products.forEach(p=>{const ct=+p.cartons||0;const d=parseDims(p.dims);q+=(+p.qty||0)*ct;c+=ct;nw+=(+p.nw||0)*ct;gw+=(+p.gw||0)*ct;if(d)vol+=d.l*d.w*d.h/1000000*ct;});return{qty:q,ctn:c,nw:Math.round(nw*100)/100,gw:Math.round(gw*100)/100,vol:Math.round(vol*1000)/1000};}
 function bankText(data,total){return data.bankText+"\nNote: Please instruct your bank that ALL bank charges (including transfer and intermediate bank fees) are to be paid by the buyer (OUR rate/all fees on buyer's account). The net amount received must be $"+(Math.round(total*100)/100)+" USD.";}
@@ -330,9 +417,9 @@ function pdfItemsToRows(pages){
   return logical.map(bucket);
 }
 function parsePiSheet(rows){
-  const d={docType:"PI",company:"",coEmail:"",coWeb:"",coTel:"",coFax:"",coCel:"",coAddr:"",to:"",tel:"",addr:"",pc:"",attn:"",ref:"",date:"",unit:"USD/PC",products:[],extras:[],remarks:"",note:"",fmAttn:"KEVIN"};
+  const d={docType:"PI",company:"",coEmail:"",coWeb:"",coTel:"",coFax:"",coCel:"",coAddr:"",to:"",tel:"",addr:"",pc:"",attn:"",ref:"",date:"",unit:"USD/PC",products:[],extras:[],remarks:"",note:"",fmAttn:"KEVIN",project:"",validUntil:"",pol:"",pod:""};
   let titleIdx=-1;
-  for(let r=0;r<Math.min(6,rows.length);r++){const joined=(rows[r]||[]).map(_ct).filter(s=>s!=="").join(" ").toUpperCase();if(joined.includes("COMMERCIAL INVOICE")){d.docType="CI";titleIdx=r;}else if(joined.includes("PACKING LIST")){d.docType="PL";titleIdx=r;}else if(joined.includes("PROFORMA INVOICE")){d.docType="PI";titleIdx=r;}}
+  for(let r=0;r<Math.min(6,rows.length);r++){const joined=(rows[r]||[]).map(_ct).filter(s=>s!=="").join(" ").toUpperCase();if(joined.includes("COMMERCIAL INVOICE")){d.docType="CI";titleIdx=r;}else if(joined.includes("PACKING LIST")){d.docType="PL";titleIdx=r;}else if(joined.includes("QUOTATION")){d.docType="QT";titleIdx=r;}else if(joined.includes("PROFORMA INVOICE")){d.docType="PI";titleIdx=r;}}
   const startRow=titleIdx>=0?titleIdx+1:5;
   function labelCells(label){
     const out=[];
@@ -368,17 +455,30 @@ function parsePiSheet(rows){
     for(let c=a.c+1;c<row.length;c++){const s=_ct(row[c]); if(/^(DATE|REF|TEL)\s*:/i.test(s))break; if(s)cells.push(s);} return cells.join(" ");}
   if(attns.length>=1)d.attn=attnVal(attns[0]);
   if(attns.length>=2)d.fmAttn=attnVal(attns[1]);
+  if(d.docType==="QT"){
+    function qtField(label){for(let r=startRow;r<rows.length;r++){const row=rows[r]||[];for(let c=0;c<row.length;c++){if(_ct(row[c])===label){for(let k=c+1;k<row.length;k++){if(_ct(row[k])!=="")return _ct(row[k]);}}}}return "";}
+    const qTo=qtField("Customer:"); if(qTo)d.to=qTo;
+    const qCt=qtField("Contact:"); if(qCt)d.attn=qCt;
+    const qPr=qtField("Project:"); if(qPr)d.project=qPr;
+    const qDt=qtField("Date:"); if(qDt&&!d.date)d.date=parseDateStr(qDt);
+    const qNo=qtField("Quote No.:"); if(qNo)d.ref=qNo;
+    const qVu=qtField("Valid Until:"); if(qVu)d.validUntil=parseDateStr(qVu);
+  }
   for(let r=startRow;r<rows.length;r++){const joined=(rows[r]||[]).map(_ct).filter(s=>s!=="").join(" ");
     if(!d.ref){const mm=joined.match(/REF\s*NO\.?:?\s*(\S+)/i); if(mm)d.ref=mm[1].trim();}
+    if(!d.ref){const mm=joined.match(/QUOTE\s*NO\.?:?\s*(\S+)/i); if(mm)d.ref=mm[1].trim();}
     if(!d.date){const mm=joined.match(/DATE\s*:?\s*(.+)$/i); if(mm)d.date=parseDateStr(mm[1]);}
-    if(d.ref&&d.date)break;}
+    if(!d.validUntil){const mm=joined.match(/VALID\s*UNTIL\s*:?\s*(.+)$/i); if(mm)d.validUntil=parseDateStr(mm[1]);}
+    if(!d.project){const mm=joined.match(/PROJECT\s*:?\s*(.+)$/i); if(mm)d.project=mm[1].trim();}
+    if(d.ref&&d.date&&(d.docType!=="QT"||d.validUntil))break;}
   let hr=-1; const cols={};
   for(let r=0;r<rows.length;r++){const row=(rows[r]||[]).map(_ct);
     const hasPN=row.some(s=>s==="P/N"), hasItem=row.some(s=>/^Item$/i.test(s));
-    if(!hasPN&&!hasItem)continue;
+    const hasNoDesc=row.some(s=>/^No\.?$/i.test(s))&&row.some(s=>/DESCRIPTION/i.test(s));
+    if(!hasPN&&!hasItem&&!hasNoDesc)continue;
     hr=r;
     row.forEach((s,c)=>{const u=s.toUpperCase().replace(/\n/g," ");
-      if(u==="P/N"||u==="ITEM")cols.pn=c;
+      if(u==="P/N"||u==="ITEM"||u==="NO."||u==="NO")cols.pn=c;
       if(u.includes("PRODUCT")||u.includes("DESCRIPTION")||u==="ITEM")cols.desc=c;
       if(u.includes("THICKNESS"))cols.thick=c;
       if(u.includes("HS"))cols.hs=c;
@@ -397,6 +497,7 @@ function parsePiSheet(rows){
     });
     break;
   }
+  if(hr>=0&&d.docType==="QT"&&!/Sheet|PC|Set|Pair/i.test(d.unit))d.unit="USD/Sheet";
   if(hr>=0){
     if(cols.qtyCtn!=null)d.docType="PL";
     for(let r=hr+1;r<rows.length;r++){
@@ -405,6 +506,7 @@ function parsePiSheet(rows){
       if(fi<0)continue;
       const firstTxt=_ct(row[fi]);
       if(/^TOTAL$/i.test(firstTxt))break;
+      if(/^SUB TOTAL$/i.test(firstTxt))continue;
       if(/^REMARKS:/i.test(firstTxt)){d.remarks=firstTxt.replace(/^REMARKS:\s*/i,"");continue;}
       if(/^Note:/i.test(firstTxt)){d.note=firstTxt.replace(/^Note:\s*/i,"");continue;}
       const desc=_ct(row[cols.desc]);
@@ -451,12 +553,14 @@ function parsePiSheet(rows){
       if(fi<0)continue;
       const t=row.slice(fi).map(_ct).filter(s=>s!=="").join(" ");
       if(/^Bank information/i.test(t)||/^\d+\./.test(t))break;
+      if(/^Terms and Conditions/i.test(t))break;
       if(/^REMARKS:/i.test(t)){d.remarks=t.replace(/^REMARKS:\s*/i,"");inRemarks=true;inNote=false;continue;}
+      if(/^Special Notes:/i.test(t)){d.remarks=t.replace(/^Special Notes:\s*/i,"");inRemarks=true;inNote=false;continue;}
       if(/^Note:/i.test(t)){d.note=t.replace(/^Note:\s*/i,"");inRemarks=false;inNote=true;continue;}
       if(inRemarks&&t)d.remarks+=" "+t;
       else if(inNote&&t)d.note+=" "+t;}
   }
-  if(!d.ref&&d.date)d.ref=refFromDate(d.date);
+  if(!d.ref&&d.date)d.ref=d.docType==="QT"?("QT-"+d.date.slice(2,4)+d.date.slice(5,7)+d.date.slice(8,10)+"-01"):refFromDate(d.date);
   return d;
 }
 function buildPiWorkbook(data, ExcelJS){
@@ -536,22 +640,44 @@ function buildPiWorkbook(data, ExcelJS){
     ws.getRow(row).height=20.1; merge("A"+row+":J"+row,"",F11,LFT,{left:med,right:med,bottom:med});
   } else {
     ws.getRow(5).height=26.25; merge("B5:I5",title,F18B,CTR,mid);
-    ws.getRow(6).height=18; put("B6","TO:",F10,{vertical:"middle"},{left:thin,top:thin}); merge("C6:G6",data.to,F10,LFT,all); merge("H6:I6","TEL: "+data.tel,F10,LFT,top);
-    ws.getRow(7).height=18; put("B7","ADD:",F10,{vertical:"middle"},{left:thin}); merge("C7:G7",data.addr,F10,LFT,all); merge("H7:I7","P.C.: "+data.pc,F10,LFT,mid);
-    ws.getRow(8).height=18; put("B8","ATTN:",F10,{vertical:"middle"},{left:thin,bottom:thin}); merge("C8:G8",data.attn,F10,LFT,all); merge("H8:I8","",F10,LFT,bot);
+    if(dt==="QT"){
+      ws.getRow(6).height=18; put("B6","Customer:",F10,{vertical:"middle"},{left:thin,top:thin}); merge("C6:G6",data.to,F10,LFT,all); merge("H6:I6","Date: "+dateStr(data.date),F10,LFT,top);
+      ws.getRow(7).height=18; put("B7","Contact:",F10,{vertical:"middle"},{left:thin}); merge("C7:G7",data.attn,F10,LFT,all); merge("H7:I7","Quote No.: "+data.ref,F10,LFT,mid);
+      ws.getRow(8).height=18; put("B8","Project:",F10,{vertical:"middle"},{left:thin,bottom:thin}); merge("C8:G8",data.project||"",F10,LFT,all); merge("H8:I8","Valid Until: "+(data.validUntil?dateStr(data.validUntil):""),F10,LFT,bot);
+    } else {
+      ws.getRow(6).height=18; put("B6","TO:",F10,{vertical:"middle"},{left:thin,top:thin}); merge("C6:G6",data.to,F10,LFT,all); merge("H6:I6","TEL: "+data.tel,F10,LFT,top);
+      ws.getRow(7).height=18; put("B7","ADD:",F10,{vertical:"middle"},{left:thin}); merge("C7:G7",data.addr,F10,LFT,all); merge("H7:I7","P.C.: "+data.pc,F10,LFT,mid);
+      ws.getRow(8).height=18; put("B8","ATTN:",F10,{vertical:"middle"},{left:thin,bottom:thin}); merge("C8:G8",data.attn,F10,LFT,all); merge("H8:I8","",F10,LFT,bot);
+    }
     ws.getRow(9).height=18; merge("B9:I9","",F10,LFT,mid);
-    ws.getRow(10).height=18; put("B10","FM:",F10,{vertical:"middle"},{left:thin,top:thin}); merge("C10:G10",data.company,F10,LFT,top); merge("H10:I10","REF NO.:"+data.ref,F10,LFT,top);
-    ws.getRow(11).height=18; put("B11","ATTN:",F10,{vertical:"middle"},{left:thin,bottom:thin}); merge("C11:G11",data.fmAttn,F10,LFT,bot); merge("H11:I11","DATE:"+dateStr(data.date),F10,LFT,bot);
+    if(dt==="QT"){
+      ws.getRow(10).height=18; put("B10","FM:",F10,{vertical:"middle"},{left:thin,top:thin}); merge("C10:G10",data.company,F10,LFT,top); merge("H10:I10","TEL: "+data.tel,F10,LFT,top);
+      ws.getRow(11).height=18; put("B11","ATTN:",F10,{vertical:"middle"},{left:thin,bottom:thin}); merge("C11:G11",data.fmAttn,F10,LFT,bot); merge("H11:I11","",F10,LFT,bot);
+    } else {
+      ws.getRow(10).height=18; put("B10","FM:",F10,{vertical:"middle"},{left:thin,top:thin}); merge("C10:G10",data.company,F10,LFT,top); merge("H10:I10","REF NO.:"+data.ref,F10,LFT,top);
+      ws.getRow(11).height=18; put("B11","ATTN:",F10,{vertical:"middle"},{left:thin,bottom:thin}); merge("C11:G11",data.fmAttn,F10,LFT,bot); merge("H11:I11","DATE:"+dateStr(data.date),F10,LFT,bot);
+    }
     ws.getRow(12).height=30;
     row=13; const first=row;
-    [["B12","P/N"],["C12","PRODUCT DESCRIPTION"],["D12","Thickness(MM)"],["E12","HS CODE"],["F12","QUANTITY\n(PCS)"],["G12","UNIT PRICE\n("+data.unit+")"],["H12","Sample Cost(USD)"],["I12","TOTAL AMOUNT(USD)"]].forEach(([c,v])=>put(c,v,F10B,CTR,all));
-    data.products.forEach(p=>{ws.getRow(row).height=45;
-      put("B"+row,"/",F10,CTR,all); put("C"+row,p.desc,F10,LFT,all); put("D"+row,p.thick,F10,CTR,all); put("E"+row,p.hs,F10,CTR,all);
+    [["B12",dt==="QT"?"No.":"P/N"],["C12","PRODUCT DESCRIPTION"],["D12","Thickness(MM)"],["E12","HS CODE"],["F12","QUANTITY\n(PCS)"],["G12","UNIT PRICE\n("+data.unit+")"],["H12","Sample Cost(USD)"],["I12","TOTAL AMOUNT(USD)"]].forEach(([c,v])=>put(c,v,F10B,CTR,all));
+    data.products.forEach((p,idx)=>{ws.getRow(row).height=45;
+      put("B"+row,dt==="QT"?idx+1:"/",F10,CTR,all); put("C"+row,p.desc,F10,LFT,all); put("D"+row,p.thick,F10,CTR,all); put("E"+row,p.hs,F10,CTR,all);
       put("F"+row,+p.qty||0,F10,CTR,all); put("G"+row,+p.unit||0,F10,CTR,all,MONEY); put("H"+row,+p.sample||0,F10,CTR,all,MONEY);
       put("I"+row,{formula:"(G"+row+"+H"+row+")*F"+row},F10,CTR,all,MONEY); row++;});
-    (data.extras||[]).forEach(e=>{ws.getRow(row).height=18; merge("B"+row+":H"+row,e.label,F10,LFT,all); put("I"+row,+e.amount||0,F10,CTR,all,MONEY); row++;});
-    const last=row-1;
-    ws.getRow(row).height=18; merge("B"+row+":H"+row,"TOTAL",F10B,RGT,all); put("I"+row,{formula:"SUM(I"+first+":I"+last+")"},F10B,CTR,all,MONEY); row++;
+    if(dt==="QT"){
+      const lastP=row-1;
+      const subRow=row;
+      ws.getRow(row).height=18; merge("B"+row+":H"+row,"SUB TOTAL",F10B,RGT,all); put("I"+row,{formula:"SUM(I"+first+":I"+lastP+")"},F10B,CTR,all,MONEY); row++;
+      const exFirst=row;
+      (data.extras||[]).forEach(e=>{ws.getRow(row).height=18; merge("B"+row+":H"+row,e.label,F10,LFT,all); put("I"+row,+e.amount||0,F10,CTR,all,MONEY); row++;});
+      const exLast=row-1;
+      ws.getRow(row).height=18; merge("B"+row+":H"+row,"TOTAL",F10B,RGT,all);
+      put("I"+row,{formula:exLast>=exFirst?("I"+subRow+"+SUM(I"+exFirst+":I"+exLast+")"):("I"+subRow)},F10B,CTR,all,MONEY); row++;
+    } else {
+      (data.extras||[]).forEach(e=>{ws.getRow(row).height=18; merge("B"+row+":H"+row,e.label,F10,LFT,all); put("I"+row,+e.amount||0,F10,CTR,all,MONEY); row++;});
+      const last=row-1;
+      ws.getRow(row).height=18; merge("B"+row+":H"+row,"TOTAL",F10B,RGT,all); put("I"+row,{formula:"SUM(I"+first+":I"+last+")"},F10B,CTR,all,MONEY); row++;
+    }
   }
   if(dt==="PI"){
     const rem=data.remarks?("REMARKS: "+data.remarks):"REMARKS:";
@@ -560,6 +686,15 @@ function buildPiWorkbook(data, ExcelJS){
       ws.getRow(row).height=ln.length<80?24:33; merge("B"+row+":I"+row,ln,F12B,{vertical:"middle",wrapText:true},mid); row++;});
     const total=calcTotal(data);
     ws.getRow(row).height=157; merge("B"+row+":I"+row,bankText(data,total),F12ABR,{horizontal:"left",vertical:"middle",wrapText:true},all);
+  } else if(dt==="QT"){
+    const sn="Special Notes: "+(data.remarks||"");
+    ws.getRow(row).height=sn.length<=95?24:(sn.length<=190?39:54); merge("B"+row+":I"+row,sn,F10B,{vertical:"middle",wrapText:true},top); row++;
+    ws.getRow(row).height=18; merge("B"+row+":I"+row,"Terms and Conditions",F10B,{vertical:"middle"},mid); row++;
+    ["Delivery terms: "+(data.term||"EXW"),"Port of loading: "+(data.pol||""),"Port of destination: "+(data.pod||""),"Currency: USD","Payment term: TT","Standard lead time: "+(data.lead||""),"Country of origin: Made in China"].forEach(ln=>{
+      ws.getRow(row).height=18; merge("B"+row+":I"+row,ln,F10,{vertical:"middle",wrapText:true},mid); row++;});
+    ws.getRow(row).height=18; merge("B"+row+":I"+row,"This quotation is not an invoice and is only an estimate of the goods described above.",F10,{vertical:"middle",wrapText:true},mid); row++;
+    ws.getRow(row).height=18; merge("B"+row+":I"+row,"Confirmed by (Tianchi): ______________________      Date: ____________",F10,{vertical:"middle",wrapText:true},mid); row++;
+    ws.getRow(row).height=18; merge("B"+row+":I"+row,"Accepted by (Customer): ______________________      Date: ____________",F10,{vertical:"middle",wrapText:true},bot);
   } else if(dt==="CI" && data.note){
     const nt="Note: "+data.note;
     ws.getRow(row).height=nt.length<=95?24:(nt.length<=190?39:54); merge("B"+row+":I"+row,nt,F12B,{vertical:"middle",wrapText:true},top);
@@ -574,7 +709,7 @@ function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"
 function collect(){
   const products=[...document.querySelectorAll("#prod_body tr")].map(tr=>{const i=tr.querySelectorAll("input");return{desc:i[0].value,thick:i[1].value,hs:i[2].value,qty:+i[3].value||0,unit:+i[4].value||0,sample:+i[5].value||0,nw:+i[6].value||0,gw:+i[7].value||0,dims:i[8].value,cartons:+i[9].value||0};}).filter(p=>p.desc.trim()!=="");
   const extras=[...document.querySelectorAll("#extra_body tr")].map(tr=>{const i=tr.querySelectorAll("input");return{label:i[0].value,amount:+i[1].value||0};}).filter(e=>e.label.trim()!=="");
-  return{docType:DOC_TYPE,company:document.getElementById("f_company").value,coEmail:document.getElementById("f_coEmail").value,coWeb:document.getElementById("f_coWeb").value,coTel:document.getElementById("f_coTel").value,coFax:document.getElementById("f_coFax").value,coCel:document.getElementById("f_coCel").value,coAddr:document.getElementById("f_coAddr").value,fmAttn:document.getElementById("f_fmAttn").value,note:document.getElementById("f_note").value,to:document.getElementById("f_to").value,tel:document.getElementById("f_tel").value,addr:document.getElementById("f_addr").value,pc:document.getElementById("f_pc").value,attn:document.getElementById("f_attn").value,date:document.getElementById("f_date").value||new Date().toISOString().slice(0,10),ref:document.getElementById("f_ref").value,unit:document.getElementById("f_unit").value,products,extras,remarks:document.getElementById("f_remarks").value,term:document.getElementById("f_term").value,lead:document.getElementById("f_lead").value,pay:document.getElementById("f_pay").value,bankText:document.getElementById("f_bank").value};
+  return{docType:DOC_TYPE,company:document.getElementById("f_company").value,coEmail:document.getElementById("f_coEmail").value,coWeb:document.getElementById("f_coWeb").value,coTel:document.getElementById("f_coTel").value,coFax:document.getElementById("f_coFax").value,coCel:document.getElementById("f_coCel").value,coAddr:document.getElementById("f_coAddr").value,fmAttn:document.getElementById("f_fmAttn").value,note:document.getElementById("f_note").value,to:document.getElementById("f_to").value,tel:document.getElementById("f_tel").value,addr:document.getElementById("f_addr").value,pc:document.getElementById("f_pc").value,attn:document.getElementById("f_attn").value,date:document.getElementById("f_date").value||new Date().toISOString().slice(0,10),ref:document.getElementById("f_ref").value,unit:document.getElementById("f_unit").value,products,extras,remarks:document.getElementById("f_remarks").value,term:document.getElementById("f_term").value,lead:document.getElementById("f_lead").value,pay:document.getElementById("f_pay").value,bankText:document.getElementById("f_bank").value,project:document.getElementById("f_project").value,validUntil:document.getElementById("f_valid").value,pol:document.getElementById("f_pol").value,pod:document.getElementById("f_pod").value};
 }
 function render(){
   const d=collect(); const total=calcTotal(d); const pk=calcPacking(d);
@@ -583,6 +718,7 @@ function render(){
     : ("合计 TOTAL：<span>"+money(total)+"</span>");
   const title=docTitle(d.docType);
   const isPL=d.docType==="PL";
+  const isQT=d.docType==="QT";
   const hb = isPL
     ? `<tr class="hb"><td class="pl-logo-col"></td><td colspan="9" class="h1 pl-txt">${esc(d.company)}</td></tr>
     <tr class="hb"><td class="pl-logo-col"></td><td colspan="9" class="c pl-txt">EMAIL: ${esc(d.coEmail)} &nbsp;&nbsp; WEB: ${esc(d.coWeb)}</td></tr>
@@ -600,6 +736,13 @@ function render(){
     <tr><td colspan="10">&nbsp;</td></tr>
     <tr><td>FM:</td><td colspan="6">${esc(d.company)}</td><td></td><td colspan="2">REF NO.:${esc(d.ref)}</td></tr>
     <tr><td>ATTN:</td><td colspan="6">${esc(d.fmAttn)}</td><td></td><td colspan="2">DATE:${esc(dateStr(d.date))}</td></tr>`
+    : isQT
+    ? `<tr><td>Customer:</td><td colspan="4">${esc(d.to)}</td><td colspan="3">Date: ${esc(dateStr(d.date))}</td></tr>
+    <tr><td>Contact:</td><td colspan="4">${esc(d.attn)}</td><td colspan="3">Quote No.: ${esc(d.ref)}</td></tr>
+    <tr><td>Project:</td><td colspan="4">${esc(d.project||"")}</td><td colspan="3">Valid Until: ${esc(d.validUntil?dateStr(d.validUntil):"")}</td></tr>
+    <tr><td colspan="8">&nbsp;</td></tr>
+    <tr><td>FM:</td><td colspan="4">${esc(d.company)}</td><td colspan="3">TEL: ${esc(d.tel)}</td></tr>
+    <tr><td>ATTN:</td><td colspan="4">${esc(d.fmAttn)}</td><td colspan="3"></td></tr>`
     : `<tr><td>TO:</td><td colspan="4">${esc(d.to)}</td><td colspan="3">TEL: ${esc(d.tel)}</td></tr>
     <tr><td>ADD:</td><td colspan="4">${esc(d.addr)}</td><td colspan="3">P.C.: ${esc(d.pc)}</td></tr>
     <tr><td>ATTN:</td><td colspan="7">${esc(d.attn)}</td></tr>
@@ -614,10 +757,17 @@ function render(){
     totalRow=`<tr><td colspan="6" class="r b">TOTAL</td><td class="c b">${pk.ctn}</td><td class="c b">${pk.qty.toLocaleString("en-US")}</td><td class="c b">${pk.gw.toFixed(1)}</td><td class="c b">${pk.vol.toFixed(3)}</td></tr>`;
     tail=`<tr><td colspan="10">&nbsp;</td></tr>`;
   } else {
-    head=`<tr><th>P/N</th><th>PRODUCT DESCRIPTION</th><th>Thickness(MM)</th><th>HS CODE</th><th>QUANTITY(PCS)</th><th>UNIT PRICE(${esc(d.unit)})</th><th>Sample Cost(USD)</th><th>TOTAL AMOUNT(USD)</th></tr>`;
-    bodyRows=d.products.map(p=>`<tr><td class="c">/</td><td>${esc(p.desc)}</td><td class="c">${esc(p.thick)}</td><td class="c">${esc(p.hs)}</td><td class="c">${p.qty}</td><td class="c">${money(p.unit)}</td><td class="c">${money(p.sample)}</td><td class="c">${money((p.unit+p.sample)*p.qty)}</td></tr>`).join("")
-      + d.extras.map(e=>`<tr><td colspan="7">${esc(e.label)}</td><td class="c">${money(e.amount)}</td></tr>`).join("");
-    totalRow=`<tr><td colspan="7" class="r b">TOTAL</td><td class="c b">${money(total)}</td></tr>`;
+    head=`<tr><th>${isQT?"No.":"P/N"}</th><th>PRODUCT DESCRIPTION</th><th>Thickness(MM)</th><th>HS CODE</th><th>QUANTITY(PCS)</th><th>UNIT PRICE(${esc(d.unit)})</th><th>Sample Cost(USD)</th><th>TOTAL AMOUNT(USD)</th></tr>`;
+    bodyRows=d.products.map((p,idx)=>`<tr><td class="c">${isQT?idx+1:"/"}</td><td>${esc(p.desc)}</td><td class="c">${esc(p.thick)}</td><td class="c">${esc(p.hs)}</td><td class="c">${p.qty}</td><td class="c">${money(p.unit)}</td><td class="c">${money(p.sample)}</td><td class="c">${money((p.unit+p.sample)*p.qty)}</td></tr>`).join("");
+    if(isQT){
+      const subTotal=d.products.reduce((s,p)=>s+((+p.unit||0)+(+p.sample||0))*(+p.qty||0),0);
+      bodyRows+=`<tr><td colspan="7" class="r b">SUB TOTAL</td><td class="c b">${money(subTotal)}</td></tr>`
+        + d.extras.map(e=>`<tr><td colspan="7">${esc(e.label)}</td><td class="c">${money(e.amount)}</td></tr>`).join("");
+      totalRow=`<tr><td colspan="7" class="r b">TOTAL</td><td class="c b">${money(total)}</td></tr>`;
+    } else {
+      bodyRows+=d.extras.map(e=>`<tr><td colspan="7">${esc(e.label)}</td><td class="c">${money(e.amount)}</td></tr>`).join("");
+      totalRow=`<tr><td colspan="7" class="r b">TOTAL</td><td class="c b">${money(total)}</td></tr>`;
+    }
   }
   const foot = d.docType==="PI"
     ? `<tr><td colspan="8" class="remarks">REMARKS: ${esc(d.remarks)}</td></tr>
@@ -626,6 +776,19 @@ function render(){
     <tr><td colspan="8" class="terms">3. PAYMENT: ${esc(d.pay)}</td></tr>
     <tr><td colspan="8" class="terms">4. MADE IN CHINA.</td></tr>
     <tr><td colspan="8" class="bank">${esc(bankText(d,total))}</td></tr>`
+    : d.docType==="QT"
+    ? `<tr><td colspan="${span}" class="remarks">Special Notes: ${esc(d.remarks)}</td></tr>
+    <tr><td colspan="${span}" class="terms">Terms and Conditions</td></tr>
+    <tr><td colspan="${span}" class="terms">Delivery terms: ${esc(d.term||"EXW")}</td></tr>
+    <tr><td colspan="${span}" class="terms">Port of loading: ${esc(d.pol||"")}</td></tr>
+    <tr><td colspan="${span}" class="terms">Port of destination: ${esc(d.pod||"")}</td></tr>
+    <tr><td colspan="${span}" class="terms">Currency: USD</td></tr>
+    <tr><td colspan="${span}" class="terms">Payment term: TT</td></tr>
+    <tr><td colspan="${span}" class="terms">Standard lead time: ${esc(d.lead||"")}</td></tr>
+    <tr><td colspan="${span}" class="terms">Country of origin: Made in China</td></tr>
+    <tr><td colspan="${span}">This quotation is not an invoice and is only an estimate of the goods described above.</td></tr>
+    <tr><td colspan="${span}">Confirmed by (Tianchi): ______________________ &nbsp;&nbsp; Date: ____________</td></tr>
+    <tr><td colspan="${span}">Accepted by (Customer): ______________________ &nbsp;&nbsp; Date: ____________</td></tr>`
     : (d.note?`<tr><td colspan="${span}">Note: ${esc(d.note)}</td></tr>`:"");
   document.getElementById("pi_preview").innerHTML=`<img class="logo${isPL?" left":""}" src="${LOGO_DATA_URI}" alt="Tianchi Logo"><table>
     ${hb}
@@ -639,28 +802,134 @@ function render(){
   </table>`;
 }
 let DOC_TYPE="PI";
-function setDocType(t){DOC_TYPE=t;
-  ["PI","CI","PL"].forEach(x=>document.getElementById("dt_"+x).classList.toggle("on",x===t));
+let CALC=[];
+function setDocType(t){
+  const prev=DOC_TYPE; DOC_TYPE=t;
+  ["PI","CI","PL","QT"].forEach(x=>document.getElementById("dt_"+x).classList.toggle("on",x===t));
   document.body.classList.toggle("pl",t==="PL");
-  document.getElementById("sec_terms").style.display=(t==="PI")?"block":"none";
+  document.getElementById("sec_terms").style.display=(t==="PI"||t==="QT")?"block":"none";
   document.getElementById("sec_bank").style.display=(t==="PI")?"block":"none";
   document.getElementById("sec_extras").style.display=(t==="PL")?"none":"block";
-  document.getElementById("sec_note").style.display=(t==="PI")?"none":"block";
+  document.getElementById("sec_note").style.display=(t==="PI"||t==="QT")?"none":"block";
+  document.getElementById("sec_calc").style.display=(t==="QT")?"block":"none";
+  document.getElementById("sec_qt").style.display=(t==="QT")?"block":"none";
+  document.getElementById("qt_ports").style.display=(t==="QT")?"":"none";
+  document.getElementById("pay_row").style.display=(t==="QT")?"none":"block";
   document.getElementById("unit_cell").style.display=(t==="PL")?"none":"block";
   document.getElementById("note_money").style.display=(t==="PL")?"none":"block";
   document.getElementById("note_pl").style.display=(t==="PL")?"block":"none";
+  document.getElementById("note_qt").style.display=(t==="QT")?"block":"none";
   document.getElementById("th_qty").textContent=(t==="PL")?"每箱件数":"数量";
+  document.getElementById("remarks_label").textContent=(t==="QT")?"Special Notes（特殊说明，没有可留空）":"REMARKS（特殊说明，没有可留空）";
+  if(t==="QT"){
+    const uSel=document.getElementById("f_unit"); if(uSel.value==="USD/PC")uSel.value="USD/Sheet";
+    const refEl=document.getElementById("f_ref");
+    if(/^Kevin\d{6}$/.test(refEl.value)){const dv=document.getElementById("f_date").value||new Date().toISOString().slice(0,10); refEl.value="QT-"+dv.slice(2,4)+dv.slice(5,7)+dv.slice(8,10)+"-01";}
+    const leadEl=document.getElementById("f_lead");
+    if(leadEl.value==="7-9 DAYS AFTER CONFIRMING THE ORDER.")leadEl.value="TO BE CONFIRMED PER ORDER";
+    if(!CALC.length&&!document.querySelectorAll("#prod_body tr").length)CALC=[{rubber:"SBR9",thick:5,fabA:"TBLK",fabB:"TBLK",size:"50*130",qty:20}];
+    renderCalc(); syncCalcToProducts();
+  }
+  if(prev==="QT"&&t!=="QT"){
+    const refEl=document.getElementById("f_ref");
+    if(/^QT-\d{6}-\d{2}$/.test(refEl.value))refEl.value=refFromDate(document.getElementById("f_date").value||new Date().toISOString().slice(0,10));
+    const leadEl=document.getElementById("f_lead");
+    if(leadEl.value==="TO BE CONFIRMED PER ORDER")leadEl.value="7-9 DAYS AFTER CONFIRMING THE ORDER.";
+  }
   render();}
 function prodRow(p){p=p||{desc:"",thick:"3MM",hs:"39269090",qty:1,unit:0,sample:0,cartons:1,nw:"",gw:"",dims:""};
   const tr=document.createElement("tr");
-  tr.innerHTML=`<td><input value="${esc(p.desc)}" oninput="render()"></td><td class="inv"><input value="${esc(p.thick)}" oninput="render()"></td><td><input value="${esc(p.hs)}" oninput="render()"></td><td><input type="number" value="${p.qty}" oninput="render()"></td><td class="price"><input type="number" step="0.01" value="${p.unit}" oninput="render()"></td><td class="price"><input type="number" step="0.01" value="${p.sample}" oninput="render()"></td><td class="pk"><input type="number" step="0.01" value="${p.nw==null?"":p.nw}" oninput="render()"></td><td class="pk"><input type="number" step="0.01" value="${p.gw==null?"":p.gw}" oninput="render()"></td><td class="pk"><input value="${esc(p.dims||"")}" oninput="render()"></td><td class="pk"><input type="number" value="${p.cartons==null?1:p.cartons}" oninput="render()"></td><td class="c line-total subtotal"></td><td><button type="button" onclick="this.closest('tr').remove();render()">✕</button></td>`;
+  tr.innerHTML=`<td><input value="${esc(p.desc)}" oninput="render()"></td><td class="inv"><input value="${esc(p.thick)}" oninput="render()"></td><td><input value="${esc(p.hs)}" oninput="render()"></td><td><input type="number" value="${p.qty}" oninput="render()"></td><td class="price"><input type="number" step="0.01" value="${p.unit}" oninput="render()"></td><td class="price"><input type="number" step="0.01" value="${p.sample}" oninput="render()"></td><td class="pk"><input type="number" step="0.01" value="${p.nw==null?"":p.nw}" oninput="render()"></td><td class="pk"><input type="number" step="0.01" value="${p.gw==null?"":p.gw}" oninput="render()"></td><td class="pk"><input value="${esc(p.dims||"")}" oninput="render()"></td><td class="pk"><input type="number" value="${p.cartons==null?1:p.cartons}" oninput="render()"></td><td class="c line-total subtotal"></td><td><button type="button" onclick="removeProdRow(this)">✕</button></td>`;
   document.getElementById("prod_body").appendChild(tr);}
 function extraRow(e){e=e||{label:"",amount:0};
   const tr=document.createElement("tr");
   tr.innerHTML=`<td><input value="${esc(e.label)}" oninput="render()"></td><td><input type="number" step="0.01" value="${e.amount}" oninput="render()"></td><td><button type="button" onclick="this.closest('tr').remove();render()">✕</button></td>`;
   document.getElementById("extra_body").appendChild(tr);}
-function addProductRow(){prodRow();render();}
+function addProductRow(){if(DOC_TYPE==="QT"){addCalcRow();return;}prodRow();render();}
 function addExtraRow(){extraRow();render();}
+
+/* ---- Quotation calculator UI: calc lines own the first product rows ---- */
+function currentRates(){
+  const r=quoteRates();
+  QUOTE_RUBBERS.forEach(x=>{const el=document.getElementById("qr_rubber_"+x.id); if(el)r.rubber[x.id]=+el.value||0;});
+  QUOTE_FABRICS.forEach(x=>{const el=document.getElementById("qr_fabric_"+x.id); if(el)r.fabric[x.id]=+el.value||0;});
+  r.fx=+document.getElementById("q_fx").value||6.6;
+  r.markup=+document.getElementById("q_markup").value||0;
+  r.lam=+document.getElementById("q_lam").value||0;
+  r.deduct=+document.getElementById("q_deduct").value||0;
+  try{if(typeof localStorage!=="undefined")localStorage.setItem("qt_rates",JSON.stringify(r));}catch(e){}
+  return r;
+}
+function renderRates(){
+  const r=quoteRates();
+  document.getElementById("q_rubber_rates").innerHTML=QUOTE_RUBBERS.map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;margin:2px 0"><span>${x.label}</span><span>¥ <input type="number" step="0.5" id="qr_rubber_${x.id}" value="${r.rubber[x.id]}" style="width:70px" oninput="onCalcInput()"> /mm</span></div>`).join("");
+  document.getElementById("q_fabric_rates").innerHTML=QUOTE_FABRICS.map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;margin:2px 0"><span>${x.label}</span><span>¥ <input type="number" step="0.5" id="qr_fabric_${x.id}" value="${r.fabric[x.id]}" style="width:70px" oninput="onCalcInput()"> /面</span></div>`).join("");
+}
+function resetRates(){try{if(typeof localStorage!=="undefined")localStorage.removeItem("qt_rates");}catch(e){} const r=quoteRates(); document.getElementById("q_fx").value=r.fx; document.getElementById("q_markup").value=r.markup; document.getElementById("q_lam").value=r.lam; document.getElementById("q_deduct").value=r.deduct; renderRates(); onCalcInput();}
+function calcRow(line,i){
+  const tr=document.createElement("tr");
+  const rubOpts=QUOTE_RUBBERS.map(r=>`<option value="${r.id}"${r.id===line.rubber?" selected":""}>${r.label} ¥${r.rate}/mm</option>`).join("");
+  const fabOpts=sel=>QUOTE_FABRICS.map(f=>`<option value="${f.id}"${f.id===sel?" selected":""}>${f.label} ¥${f.rate}</option>`).join("");
+  tr.innerHTML=`<td><select onchange="calcChanged(${i},'rubber',this.value)">${rubOpts}</select></td><td><input type="number" step="0.5" value="${line.thick}" oninput="calcChanged(${i},'thick',this.value)"></td><td><select onchange="calcChanged(${i},'fabA',this.value)">${fabOpts(line.fabA)}</select></td><td><select onchange="calcChanged(${i},'fabB',this.value)">${fabOpts(line.fabB)}</select></td><td><input value="${esc(line.size||"50*130")}" oninput="calcChanged(${i},'size',this.value)"></td><td><input type="number" value="${line.qty}" oninput="calcChanged(${i},'qty',this.value)"></td><td class="c" id="cc_cost_${i}"></td><td class="c" id="cc_usd_${i}"></td><td class="c" id="cc_total_${i}"></td><td><button type="button" onclick="removeCalcRow(${i})">✕</button></td>`;
+  return tr;
+}
+function renderCalc(){
+  const body=document.getElementById("calc_body"); if(!body)return;
+  body.innerHTML="";
+  CALC.forEach((line,i)=>body.appendChild(calcRow(line,i)));
+  updateCalcCells();
+}
+function updateCalcCells(){
+  const r=currentRates();
+  CALC.forEach((line,i)=>{
+    const c=calcQuoteLine(line,r);
+    const a=document.getElementById("cc_cost_"+i), b=document.getElementById("cc_usd_"+i), cc=document.getElementById("cc_total_"+i);
+    if(a)a.textContent="¥"+c.costRmb.toFixed(2);
+    if(b)b.textContent="$"+c.usd.toFixed(2);
+    if(cc)cc.textContent="$"+c.total.toFixed(2);
+  });
+}
+function calcChanged(i,field,val){
+  if(!CALC[i])return;
+  CALC[i][field]=(field==="thick"||field==="qty")?+val||0:val;
+  updateCalcCells(); syncCalcToProducts(); render();
+}
+function onCalcInput(){updateCalcCells(); syncCalcToProducts(); render();}
+function addCalcRow(){CALC.push({rubber:"SBR9",thick:5,fabA:"TBLK",fabB:"TBLK",size:"50*130",qty:20}); renderCalc(); syncCalcToProducts(); render();}
+function removeCalcRow(i){CALC.splice(i,1); renderCalc(); syncCalcToProducts(); render();}
+function syncCalcToProducts(){
+  const rates=currentRates();
+  const body=document.getElementById("prod_body");
+  [...body.querySelectorAll("tr")].forEach(tr=>{const ci=tr.dataset.calcIdx; if(ci!==undefined&&ci!==""&&+ci>=CALC.length)tr.remove();});
+  CALC.forEach((line,i)=>{
+    const r=calcQuoteLine(line,rates);
+    let tr=[...body.querySelectorAll("tr")].find(x=>x.dataset.calcIdx===String(i));
+    if(!tr){
+      prodRow({desc:r.desc,thick:line.thick+"MM",hs:"39269090",qty:line.qty,unit:r.usd,sample:0,cartons:1,nw:"",gw:"",dims:""});
+      tr=body.querySelector("tr:last-child");
+      tr.dataset.calcIdx=String(i);
+    }
+    const inp=tr.querySelectorAll("input");
+    const hs=inp[2].value;
+    inp[0].value=r.desc; inp[1].value=line.thick+"MM"; inp[2].value=hs||"39269090";
+    inp[3].value=line.qty; inp[4].value=r.usd; inp[5].value=0;
+  });
+}
+function removeProdRow(btn){
+  const tr=btn.closest("tr");
+  const ci=tr.dataset&&tr.dataset.calcIdx;
+  if(DOC_TYPE==="QT"&&ci!==undefined&&ci!==""){CALC.splice(+ci,1); renderCalc(); syncCalcToProducts();}
+  else tr.remove();
+  render();
+}
+function initQuote(){
+  const r=quoteRates();
+  document.getElementById("q_fx").value=r.fx;
+  document.getElementById("q_markup").value=r.markup;
+  document.getElementById("q_lam").value=r.lam;
+  document.getElementById("q_deduct").value=r.deduct;
+  renderRates(); renderCalc();
+}
 function setBankText(kind){
   if(kind==="HK"){document.getElementById("f_bank").value=HK_BANK;}
   else if(kind==="US"){const u=JSON.parse(localStorage.getItem("pi_us_bank")||"null");
@@ -687,9 +956,13 @@ function fillForm(s){
   document.getElementById("f_pc").value=s.pc||""; document.getElementById("f_attn").value=s.attn||""; document.getElementById("f_date").value=s.date||"";
   document.getElementById("f_ref").value=s.ref||""; const uSel=document.getElementById("f_unit"); if(s.unit&&![...uSel.options].some(o=>o.value===s.unit)){const o=document.createElement("option"); o.value=s.unit; o.textContent=s.unit; uSel.appendChild(o);} uSel.value=s.unit||"USD/PC";
   document.getElementById("f_remarks").value=s.remarks||""; document.getElementById("f_lead").value=s.lead||"7-9 DAYS AFTER CONFIRMING THE ORDER."; document.getElementById("f_term").value=s.term||"EXW"; document.getElementById("f_note").value=s.note||"";
+  document.getElementById("f_project").value=s.project||""; document.getElementById("f_valid").value=s.validUntil||"";
+  document.getElementById("f_pol").value=s.pol||""; document.getElementById("f_pod").value=s.pod||"";
+  CALC=(s.calc&&s.calc.length)?s.calc.map(c=>({rubber:c.rubber||"SBR9",thick:+c.thick||5,fabA:c.fabA||"TBLK",fabB:c.fabB||"TBLK",size:c.size||"50*130",qty:+c.qty||0})):[];
+  document.getElementById("prod_body").innerHTML=""; document.getElementById("extra_body").innerHTML="";
   setDocType(s.docType||"PI");
-  document.getElementById("prod_body").innerHTML=""; (s.products||[]).forEach(prodRow);
-  document.getElementById("extra_body").innerHTML=""; (s.extras||[]).forEach(extraRow);
+  if(!s.calc||!s.calc.length){(s.products||[]).forEach(prodRow);}
+  (s.extras||[]).forEach(extraRow);
   document.querySelector('input[name="bank"][value="HK"]').checked=true; setBankText("HK"); render();
 }
 function loadSample(name){
@@ -734,10 +1007,12 @@ function resetForm(){
   document.getElementById("f_coTel").value="0734-87961816"; document.getElementById("f_coFax").value="0734-87961819"; document.getElementById("f_coCel").value="86-13417385320"; document.getElementById("f_coAddr").value="GUIYANG INDUSTRIAL PARK, GUIYANG TOWN, QIDONG COUNTY, HENGYANG CITY, HUNAN PROVINCE,CHINA"; document.getElementById("f_fmAttn").value="KEVIN";
   const today=new Date().toISOString().slice(0,10); document.getElementById("f_date").value=today; document.getElementById("f_ref").value=refFromDate(today);
   document.getElementById("prod_body").innerHTML=""; prodRow(); document.getElementById("extra_body").innerHTML=""; extraRow({label:"",amount:0});
-  document.getElementById("f_remarks").value=""; document.getElementById("f_lead").value="7-9 DAYS AFTER CONFIRMING THE ORDER."; document.getElementById("f_note").value=""; setDocType("PI");
+  document.getElementById("f_remarks").value=""; document.getElementById("f_lead").value="7-9 DAYS AFTER CONFIRMING THE ORDER."; document.getElementById("f_note").value="";
+  document.getElementById("f_project").value=""; document.getElementById("f_valid").value=""; document.getElementById("f_pol").value=""; document.getElementById("f_pod").value="";
+  CALC=[]; renderCalc(); setDocType("PI");
   document.querySelector('input[name="bank"][value="HK"]').checked=true; setBankText("HK"); render();
 }
-function fileBase(){const d=collect(); const pre=d.docType==="CI"?"CI":d.docType==="PL"?"PL":"PI"; const short=(d.to||pre).replace(/[^A-Za-z0-9]+/g,"_").slice(0,30); const dt=new Date(d.date); return pre+"_For_"+short+"-"+(dt.getMonth()+1)+"."+dt.getDate();}
+function fileBase(){const d=collect(); const pre=d.docType==="CI"?"CI":d.docType==="PL"?"PL":d.docType==="QT"?"QT":"PI"; const short=(d.to||pre).replace(/[^A-Za-z0-9]+/g,"_").slice(0,30); const dt=new Date(d.date); return pre+"_For_"+short+"-"+(dt.getMonth()+1)+"."+dt.getDate();}
 async function downloadExcel(){
   const d=collect(); if(!d.products.length){alert("请至少填一个产品");return;}
   const wb=buildPiWorkbook(d, ExcelJS);
@@ -753,13 +1028,24 @@ function downloadWord(){
     table=`<table border="1" cellspacing="0" cellpadding="5"><tr><th>Item</th><th>HS CODE</th><th>QTY/CTN (PCS)</th><th>N.W./CTN (KGS)</th><th>G.W./CTN (KGS)</th><th>CARTON SIZE (CM)</th><th>CARTONS</th><th>TOTAL QTY (PCS)</th><th>TOTAL WEIGHT (KG)</th><th>VOLUME (M3)</th></tr>${rows}<tr><td colspan="6" align="right"><b>TOTAL</b></td><td><b>${pk.ctn}</b></td><td><b>${pk.qty.toLocaleString("en-US")}</b></td><td><b>${pk.gw.toFixed(1)}</b></td><td><b>${pk.vol.toFixed(3)}</b></td></tr></table>`;
     foot=d.note?`<p>Note: ${esc(d.note)}</p>`:"";
   } else {
-    const rows=d.products.map(p=>`<tr><td>/</td><td>${esc(p.desc)}</td><td>${esc(p.thick)}</td><td>${esc(p.hs)}</td><td>${p.qty}</td><td>${money(p.unit)}</td><td>${money(p.sample)}</td><td>${money((p.unit+p.sample)*p.qty)}</td></tr>`).join("");
+    const isQT=d.docType==="QT";
+    const rows=d.products.map((p,idx)=>`<tr><td>${isQT?idx+1:"/"}</td><td>${esc(p.desc)}</td><td>${esc(p.thick)}</td><td>${esc(p.hs)}</td><td>${p.qty}</td><td>${money(p.unit)}</td><td>${money(p.sample)}</td><td>${money((p.unit+p.sample)*p.qty)}</td></tr>`).join("");
     const ex=d.extras.map(e=>`<tr><td colspan="7">${esc(e.label)}</td><td>${money(e.amount)}</td></tr>`).join("");
-    table=`<table border="1" cellspacing="0" cellpadding="5"><tr><th>P/N</th><th>PRODUCT DESCRIPTION</th><th>Thickness(MM)</th><th>HS CODE</th><th>QUANTITY(PCS)</th><th>UNIT PRICE(${esc(d.unit)})</th><th>Sample Cost(USD)</th><th>TOTAL AMOUNT(USD)</th></tr>${rows}${ex}<tr><td colspan="7" align="right"><b>TOTAL</b></td><td><b>${money(total)}</b></td></tr></table>`;
+    const subTotal=d.products.reduce((s,p)=>s+((+p.unit||0)+(+p.sample||0))*(+p.qty||0),0);
+    const totRow=isQT
+      ? `<tr><td colspan="7" align="right"><b>SUB TOTAL</b></td><td><b>${money(subTotal)}</b></td></tr>${ex}<tr><td colspan="7" align="right"><b>TOTAL</b></td><td><b>${money(total)}</b></td></tr>`
+      : `${ex}<tr><td colspan="7" align="right"><b>TOTAL</b></td><td><b>${money(total)}</b></td></tr>`;
+    table=`<table border="1" cellspacing="0" cellpadding="5"><tr><th>${isQT?"No.":"P/N"}</th><th>PRODUCT DESCRIPTION</th><th>Thickness(MM)</th><th>HS CODE</th><th>QUANTITY(PCS)</th><th>UNIT PRICE(${esc(d.unit)})</th><th>Sample Cost(USD)</th><th>TOTAL AMOUNT(USD)</th></tr>${rows}${totRow}</table>`;
     foot = d.docType==="PI"
       ? `<p style="color:red"><b>REMARKS: ${esc(d.remarks)}</b></p>
   <p><b>1. THE ABOVE PRICE IS ${esc(d.term)} PRICE.<br>2. LEAD TIME: ${esc(d.lead)}<br>3. PAYMENT: ${esc(d.pay)}<br>4. MADE IN CHINA.</b></p>
   <p style="color:red"><b>${esc(bankText(d,total))}</b></p>`
+      : isQT
+      ? `<p><b>Special Notes: ${esc(d.remarks)}</b></p>
+  <p><b>Terms and Conditions</b><br>Delivery terms: ${esc(d.term||"EXW")}<br>Port of loading: ${esc(d.pol||"")}<br>Port of destination: ${esc(d.pod||"")}<br>Currency: USD<br>Payment term: TT<br>Standard lead time: ${esc(d.lead||"")}<br>Country of origin: Made in China</p>
+  <p>This quotation is not an invoice and is only an estimate of the goods described above.</p>
+  <p>Confirmed by (Tianchi): ______________________ &nbsp;&nbsp; Date: ____________</p>
+  <p>Accepted by (Customer): ______________________ &nbsp;&nbsp; Date: ____________</p>`
       : (d.note?`<p>Note: ${esc(d.note)}</p>`:"");
   }
   const headTable = d.docType==="PL"
@@ -768,14 +1054,18 @@ function downloadWord(){
   const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${title}</title></head><body style="font-family:Arial">
   ${headTable}
   <h2 style="text-align:center">${title}</h2>
-  <p>TO: ${esc(d.to)} &nbsp; TEL: ${esc(d.tel)}<br>ADD: ${esc(d.addr)} &nbsp; P.C.: ${esc(d.pc)}<br>ATTN: ${esc(d.attn)}</p>
-  <p>FM: ${esc(d.company)} &nbsp; REF NO.:${esc(d.ref)}<br>ATTN: ${esc(d.fmAttn)} &nbsp; DATE:${esc(dateStr(d.date))}</p>
+  ${d.docType==="QT"
+    ? `<p>Customer: ${esc(d.to)} &nbsp; Date: ${esc(dateStr(d.date))}<br>Contact: ${esc(d.attn)} &nbsp; Quote No.: ${esc(d.ref)}<br>Project: ${esc(d.project||"")} &nbsp; Valid Until: ${esc(d.validUntil?dateStr(d.validUntil):"")}</p>
+  <p>FM: ${esc(d.company)} &nbsp; TEL: ${esc(d.tel)}<br>ATTN: ${esc(d.fmAttn)}</p>`
+    : `<p>TO: ${esc(d.to)} &nbsp; TEL: ${esc(d.tel)}<br>ADD: ${esc(d.addr)} &nbsp; P.C.: ${esc(d.pc)}<br>ATTN: ${esc(d.attn)}</p>
+  <p>FM: ${esc(d.company)} &nbsp; REF NO.:${esc(d.ref)}<br>ATTN: ${esc(d.fmAttn)} &nbsp; DATE:${esc(dateStr(d.date))}</p>`}
   ${table}
   ${foot}</body></html>`;
   const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob(["\ufeff"+html],{type:"application/msword"})); a.download=fileBase()+".doc"; a.click();
 }
-document.getElementById("f_date").addEventListener("change",e=>{document.getElementById("f_ref").value=refFromDate(e.target.value);render();});
-["f_company","f_coEmail","f_coWeb","f_coTel","f_coFax","f_coCel","f_coAddr","f_fmAttn","f_to","f_tel","f_addr","f_pc","f_attn","f_ref","f_unit","f_remarks","f_term","f_lead","f_pay","f_bank","f_note"].forEach(id=>document.getElementById(id).addEventListener("input",render));
+document.getElementById("f_date").addEventListener("change",e=>{const v=e.target.value;document.getElementById("f_ref").value=DOC_TYPE==="QT"?("QT-"+v.slice(2,4)+v.slice(5,7)+v.slice(8,10)+"-01"):refFromDate(v);render();});
+["f_company","f_coEmail","f_coWeb","f_coTel","f_coFax","f_coCel","f_coAddr","f_fmAttn","f_to","f_tel","f_addr","f_pc","f_attn","f_ref","f_unit","f_remarks","f_term","f_lead","f_pay","f_bank","f_note","f_project","f_valid","f_pol","f_pod"].forEach(id=>document.getElementById(id).addEventListener("input",render));
+initQuote();
 loadSample("Antonio");
 </script>
 </body>
