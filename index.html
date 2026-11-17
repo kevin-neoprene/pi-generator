@@ -220,9 +220,9 @@ const SAMPLES = {
     products:[{desc:"Neoprene Panel",thick:"",hs:"39269090",qty:500,unit:0,sample:0,cartons:40,nw:14,gw:14.5,dims:"49.5*45.5*43"},{desc:"Neoprene Base",thick:"",hs:"39269090",qty:4000,unit:0,sample:0,cartons:5,nw:13.5,gw:14,dims:"41*60*41"}],
     extras:[], note:"", remarks:"", lead:"7-9 DAYS AFTER CONFIRMING THE ORDER.", term:"EXW", bank:"HK"},
   RickQT: {to:"KAT Europe Ltd", tel:"+44 (0)1430 411388", addr:"Riplingham House, Westoby Lane, Riplingham, Cottingham, East Yorkshire, HU20 3XT, UK", pc:"HU20 3XT", attn:"Rick Clark", date:"2026-11-07", ref:"QT-261107-01", unit:"USD/Sheet", docType:"QT",
-    products:[{desc:"Neoprene Sheet 5mm",thick:"5MM",hs:"39269090",qty:20,unit:15.3,sample:0,cartons:1,nw:"",gw:"",dims:""},{desc:"Neoprene Sheet 6mm",thick:"6MM",hs:"39269090",qty:20,unit:17.42,sample:0,cartons:1,nw:"",gw:"",dims:""},{desc:"Neoprene Sheet 7mm",thick:"7MM",hs:"39269090",qty:20,unit:19.55,sample:0,cartons:1,nw:"",gw:"",dims:""}], extras:[], remarks:"Material: SBR 9°, black T-fabric laminated on both sides; sheet size 50×130cm.", note:"", lead:"TO BE CONFIRMED PER ORDER", term:"EXW", bank:"HK",
+    products:[{desc:"Neoprene Sheet 5mm",thick:"5MM",hs:"39269090",qty:20,unit:15.3,sample:0,cartons:1,nw:"",gw:"",dims:""},{desc:"Neoprene Sheet 6mm",thick:"6MM",hs:"39269090",qty:20,unit:17.42,sample:0,cartons:1,nw:"",gw:"",dims:""},{desc:"Neoprene Sheet 7mm",thick:"7MM",hs:"39269090",qty:20,unit:19.55,sample:0,cartons:1,nw:"",gw:"",dims:""}], extras:[], remarks:"Material: SBR 9°, black T-fabric laminated on both sides; sheet size 51\" x 130\".", note:"", lead:"TO BE CONFIRMED PER ORDER", term:"EXW", bank:"HK",
     project:"Neoprene Sheet Quotation", validUntil:"2026-12-07", pol:"", pod:"",
-    calc:[{rubber:"SBR9",rubberPrice:14,thick:5,sides:"2",fabA:"T布(黑色)",fabAprice:13,fabB:"T布(黑色)",fabBprice:13,size:"50*130",qty:20},{rubber:"SBR9",rubberPrice:14,thick:6,sides:"2",fabA:"T布(黑色)",fabAprice:13,fabB:"T布(黑色)",fabBprice:13,size:"50*130",qty:20},{rubber:"SBR9",rubberPrice:14,thick:7,sides:"2",fabA:"T布(黑色)",fabAprice:13,fabB:"T布(黑色)",fabBprice:13,size:"50*130",qty:20}]}
+    calc:[{rubber:"SBR9",rubberPrice:14,thick:5,sides:"2",fabA:"T布(黑色)",fabAprice:13,fabB:"T布(黑色)",fabBprice:13,size:"51\" x 130\"",qty:20},{rubber:"SBR9",rubberPrice:14,thick:6,sides:"2",fabA:"T布(黑色)",fabAprice:13,fabB:"T布(黑色)",fabBprice:13,size:"51\" x 130\"",qty:20},{rubber:"SBR9",rubberPrice:14,thick:7,sides:"2",fabA:"T布(黑色)",fabAprice:13,fabB:"T布(黑色)",fabBprice:13,size:"51\" x 130\"",qty:20}]}
 };
 
 /* Blank Quotation: the template (RickQT) and a blank quote coexist as two one-click
@@ -239,7 +239,7 @@ function blankQuoteSample(){
   return{docType:"QT", date:now.toISOString().slice(0,10), ref:"QT-"+yy+mm+dd+"-01", unit:"USD/Sheet",
     to:"", tel:"", addr:"", pc:"", attn:"",
     products:[{desc:"",thick:"",hs:"39269090",qty:"",unit:"",sample:0}],
-    calc:[{rubber:"SBR9",rubberPrice:rp,thick:5,sides:"2",fabA:"T布(黑色)",fabAprice:fp,fabB:"T布(黑色)",fabBprice:fp,size:"50*130",qty:20}],
+    calc:[{rubber:"SBR9",rubberPrice:rp,thick:5,sides:"2",fabA:"T布(黑色)",fabAprice:fp,fabB:"T布(黑色)",fabBprice:fp,size:"51\" x 130\"",qty:20}],
     extras:[{label:"",amount:0}], remarks:""};
 }
 function ordinal(n){return n===1?"1ST":n===2?"2ND":n===3?"3RD":n+"TH";}
@@ -311,11 +311,11 @@ function quoteDesc(line){
   const fb=fabricLabel(line.fabB);
   const faces=(String(line.sides||"2")==="1")?1:2;
   const th=(+line.thick||0);
-  const size=String(line.size||"50*130").replace(/\s+/g,"").toUpperCase();
+  const size=String(line.size||"51\" x 130\"").replace(/\s+/g," ").trim();
   const parts=[th+"mm "+rb];
   if(fa)parts.push(fa);
   if(faces===2&&fb)parts.push(fb);
-  return parts.join("+")+" "+size+"CM";
+  return parts.join("+")+" "+size;
 }
 function calcQuoteLine(line,rates){
   rates=rates||quoteRates();
@@ -930,7 +930,7 @@ function calcRow(line,i){
   const faPrice=(line.fabAprice!=null&&line.fabAprice!=="")?+line.fabAprice:fabricPrice(line.fabA,rates);
   const fbPrice=(line.fabBprice!=null&&line.fabBprice!=="")?+line.fabBprice:fabricPrice(line.fabB,rates);
   const dis=sides==="1"?" disabled":"";
-  tr.innerHTML=`<td><div style="display:flex;gap:3px"><select onchange="calcChanged(${i},'rubber',this.value)" style="flex:1;min-width:70px">${rubOpts}</select><input type="number" step="0.5" id="cc_rubberPrice_${i}" value="${rubPrice}" oninput="calcChanged(${i},'rubberPrice',this.value)" style="width:56px" title="¥/mm"></div></td><td><input type="number" step="0.5" value="${line.thick}" oninput="calcChanged(${i},'thick',this.value)"></td><td><select onchange="calcChanged(${i},'sides',this.value)"><option value="2"${sides!=="1"?" selected":""}>双面</option><option value="1"${sides==="1"?" selected":""}>单面</option></select></td><td><div style="display:flex;gap:3px"><input list="fabricList" id="cc_fabA_${i}" value="${esc(faName)}" oninput="calcChanged(${i},'fabA',this.value)" style="flex:1;min-width:56px"><input type="number" step="0.5" id="cc_fabAprice_${i}" value="${faPrice}" oninput="calcChanged(${i},'fabAprice',this.value)" style="width:56px" title="¥/面"></div></td><td><div style="display:flex;gap:3px"><input list="fabricList" id="cc_fabB_${i}" value="${esc(fbName)}" oninput="calcChanged(${i},'fabB',this.value)" style="flex:1;min-width:56px"${dis}><input type="number" step="0.5" id="cc_fabBprice_${i}" value="${fbPrice}" oninput="calcChanged(${i},'fabBprice',this.value)" style="width:56px" title="¥/面"${dis}></div></td><td><input value="${esc(line.size||"50*130")}" oninput="calcChanged(${i},'size',this.value)"></td><td><input type="number" value="${line.qty}" oninput="calcChanged(${i},'qty',this.value)"></td><td class="c" id="cc_cost_${i}"></td><td class="c" id="cc_usd_${i}"></td><td class="c" id="cc_total_${i}"></td><td style="white-space:nowrap"><button type="button" onclick="pushCalcToProduct(${i})" title="把算出的单价填入产品表（成品名称自己写）">→ 产品</button> <button type="button" onclick="removeCalcRow(${i})">✕</button></td>`;
+  tr.innerHTML=`<td><div style="display:flex;gap:3px"><select onchange="calcChanged(${i},'rubber',this.value)" style="flex:1;min-width:70px">${rubOpts}</select><input type="number" step="0.5" id="cc_rubberPrice_${i}" value="${rubPrice}" oninput="calcChanged(${i},'rubberPrice',this.value)" style="width:56px" title="¥/mm"></div></td><td><input type="number" step="0.5" value="${line.thick}" oninput="calcChanged(${i},'thick',this.value)"></td><td><select onchange="calcChanged(${i},'sides',this.value)"><option value="2"${sides!=="1"?" selected":""}>双面</option><option value="1"${sides==="1"?" selected":""}>单面</option></select></td><td><div style="display:flex;gap:3px"><input list="fabricList" id="cc_fabA_${i}" value="${esc(faName)}" oninput="calcChanged(${i},'fabA',this.value)" style="flex:1;min-width:56px"><input type="number" step="0.5" id="cc_fabAprice_${i}" value="${faPrice}" oninput="calcChanged(${i},'fabAprice',this.value)" style="width:56px" title="¥/面"></div></td><td><div style="display:flex;gap:3px"><input list="fabricList" id="cc_fabB_${i}" value="${esc(fbName)}" oninput="calcChanged(${i},'fabB',this.value)" style="flex:1;min-width:56px"${dis}><input type="number" step="0.5" id="cc_fabBprice_${i}" value="${fbPrice}" oninput="calcChanged(${i},'fabBprice',this.value)" style="width:56px" title="¥/面"${dis}></div></td><td><input value="${esc(line.size||"51\" x 130\"")}" oninput="calcChanged(${i},'size',this.value)"></td><td><input type="number" value="${line.qty}" oninput="calcChanged(${i},'qty',this.value)"></td><td class="c" id="cc_cost_${i}"></td><td class="c" id="cc_usd_${i}"></td><td class="c" id="cc_total_${i}"></td><td style="white-space:nowrap"><button type="button" onclick="pushCalcToProduct(${i})" title="把算出的单价填入产品表（成品名称自己写）">→ 产品</button> <button type="button" onclick="removeCalcRow(${i})">✕</button></td>`;
   return tr;
 }
 function renderCalc(){
@@ -991,7 +991,7 @@ function removeCalcRow(i){CALC.splice(i,1); renderCalc(); render();}
 function defaultCalcLine(){
   let p=13, rp=14;
   try{const r=currentRates(); if(r.fabric&&r.fabric.TBLK!=null)p=+r.fabric.TBLK; if(r.rubber&&r.rubber.SBR9!=null)rp=+r.rubber.SBR9;}catch(e){}
-  return{rubber:"SBR9",rubberPrice:rp,thick:5,sides:"2",fabA:"T布(黑色)",fabAprice:p,fabB:"T布(黑色)",fabBprice:p,size:"50*130",qty:20};
+  return{rubber:"SBR9",rubberPrice:rp,thick:5,sides:"2",fabA:"T布(黑色)",fabAprice:p,fabB:"T布(黑色)",fabBprice:p,size:"51\" x 130\"",qty:20};
 }
 function normalizeCalcLine(c){
   c=c||{};
@@ -1005,7 +1005,7 @@ function normalizeCalcLine(c){
     fabAprice:(c.fabAprice!=null&&c.fabAprice!=="")?+c.fabAprice:fabricPrice(c.fabA,rates),
     fabB:fabricLabel(c.fabB)||"T布(黑色)",
     fabBprice:(c.fabBprice!=null&&c.fabBprice!=="")?+c.fabBprice:fabricPrice(c.fabB,rates),
-    size:c.size||"50*130",
+    size:c.size||"51\" x 130\"",
     qty:+c.qty||0,
     lam:(c.lam!=null)?+c.lam:undefined
   };
