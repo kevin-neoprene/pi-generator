@@ -84,6 +84,7 @@
       <button type="button" onclick="loadSample('Sam')">Sam Soni（阿联酋 · CI）</button>
       <button type="button" onclick="loadSample('Colonial')">Colonial（澳洲 · 装箱单）</button>
       <button type="button" onclick="loadSample('RickQT')">Rick（报价单 · 算价示例）</button>
+      <button type="button" onclick="loadBlankQT()">空白报价单</button>
       <button type="button" onclick="resetForm()">清空新建</button>
     </div>
 
@@ -223,6 +224,24 @@ const SAMPLES = {
     project:"Neoprene Sheet Quotation", validUntil:"2026-12-07", pol:"", pod:"",
     calc:[{rubber:"SBR9",rubberPrice:14,thick:5,sides:"2",fabA:"T布(黑色)",fabAprice:13,fabB:"T布(黑色)",fabBprice:13,size:"50*130",qty:20},{rubber:"SBR9",rubberPrice:14,thick:6,sides:"2",fabA:"T布(黑色)",fabAprice:13,fabB:"T布(黑色)",fabBprice:13,size:"50*130",qty:20},{rubber:"SBR9",rubberPrice:14,thick:7,sides:"2",fabA:"T布(黑色)",fabAprice:13,fabB:"T布(黑色)",fabBprice:13,size:"50*130",qty:20}]}
 };
+
+/* Blank Quotation: the template (RickQT) and a blank quote coexist as two one-click
+   options. A blank quote has an empty buyer, one empty product row to type the
+   finished product into, and one default calc line (SBR 9°, 5mm, double-sided). */
+function blankQuoteSample(){
+  const now=new Date();
+  const yy=String(now.getFullYear()).slice(2);
+  const mm=String(now.getMonth()+1).padStart(2,"0");
+  const dd=String(now.getDate()).padStart(2,"0");
+  const r=quoteRates();
+  const rp=(r.rubber&&r.rubber.SBR9!=null)?+r.rubber.SBR9:14;
+  const fp=(r.fabric&&r.fabric.TBLK!=null)?+r.fabric.TBLK:13;
+  return{docType:"QT", date:now.toISOString().slice(0,10), ref:"QT-"+yy+mm+dd+"-01", unit:"USD/Sheet",
+    to:"", tel:"", addr:"", pc:"", attn:"",
+    products:[{desc:"",thick:"",hs:"39269090",qty:"",unit:"",sample:0}],
+    calc:[{rubber:"SBR9",rubberPrice:rp,thick:5,sides:"2",fabA:"T布(黑色)",fabAprice:fp,fabB:"T布(黑色)",fabBprice:fp,size:"50*130",qty:20}],
+    extras:[{label:"",amount:0}], remarks:""};
+}
 function ordinal(n){return n===1?"1ST":n===2?"2ND":n===3?"3RD":n+"TH";}
 function dateStr(iso){const d=new Date(iso+"T00:00:00");const M=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];return ordinal(d.getDate())+","+M[d.getMonth()]+","+d.getFullYear();}
 function refFromDate(iso){const d=new Date(iso+"T00:00:00");return "Kevin"+String(d.getFullYear()).slice(2)+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0");}
@@ -1070,6 +1089,7 @@ function fillForm(s){
 function loadSample(name){
   const s=SAMPLES[name]; if(!s) return; fillForm(s);
 }
+function loadBlankQT(){ fillForm(blankQuoteSample()); }
 async function importPiFile(file){
   if(!file) return;
   const st=document.getElementById("import_status"); st.style.display="none";
