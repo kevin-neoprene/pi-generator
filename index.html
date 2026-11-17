@@ -129,7 +129,7 @@
       <div class="row2"><div><label>面布+胶水占的厚度 mm（双面默认 0.5，单面按一半算）</label><input id="q_deduct" type="number" step="0.1" value="0.5" oninput="onCalcInput()"></div>
       <div><label>&nbsp;</label><button type="button" class="btn ghost" onclick="resetRates()">恢复供应商默认价目表</button></div></div>
     </details>
-    <table class="edit"><thead><tr><th>胶料（¥/mm)</th><th>总厚度 mm</th><th>贴合</th><th>面布 A（名 + ¥/面）</th><th>面布 B（名 + ¥/面）</th><th>尺寸 CM</th><th>数量（片）</th><th>成本 ¥/张</th><th>单价 USD/张</th><th>小计 USD</th><th></th></tr></thead>
+    <table class="edit"><thead><tr><th>胶料（¥/mm)</th><th>总厚度 mm</th><th>贴合</th><th>面布 A（名 + ¥/面）</th><th>面布 B（名 + ¥/面）</th><th>尺寸（英寸）</th><th>数量（片）</th><th>成本 ¥/张</th><th>单价 USD/张</th><th>小计 USD</th><th></th></tr></thead>
     <tbody id="calc_body"></tbody></table>
     <datalist id="fabricList"></datalist>
     <p style="margin-top:6px"><button type="button" class="btn ghost" onclick="addCalcRow()">+ 加一算价行</button></p>
@@ -757,7 +757,7 @@ function buildPiWorkbook(data, ExcelJS){
 
 <script>
 /* ---- UI ---- */
-function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");}
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/\n/g,"<br>");}
 function collect(){
   const products=[...document.querySelectorAll("#prod_body tr")].map(tr=>{const i=tr.querySelectorAll("input");return{desc:i[0].value,thick:i[1].value,hs:i[2].value,qty:+i[3].value||0,unit:+i[4].value||0,sample:+i[5].value||0,nw:+i[6].value||0,gw:+i[7].value||0,dims:i[8].value,cartons:+i[9].value||0};}).filter(p=>p.desc.trim()!=="");
   const extras=[...document.querySelectorAll("#extra_body tr")].map(tr=>{const i=tr.querySelectorAll("input");return{label:i[0].value,amount:+i[1].value||0};}).filter(e=>e.label.trim()!=="");
