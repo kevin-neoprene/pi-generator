@@ -31,13 +31,13 @@
   /* ---- PI preview, mimics the Excel sheet ---- */
   .pi{background:#fff;border:1px solid #999;padding:0;width:100%;font-size:12px}
   .pi{position:relative}
-  .pi .logo{position:absolute;left:6px;top:6px;width:110px;height:auto;z-index:2}
+  .pi .logo{position:absolute;left:14px;top:2px;width:100px;height:auto;z-index:2}
   .pi table{width:100%;border-collapse:collapse;table-layout:fixed}
   .pi td,.pi th{border:1px solid #000;padding:5px 6px;vertical-align:middle;word-wrap:break-word}
   .pi tr.hb td{border-top:none;border-bottom:none}
-  .pi tr.hb td[colspan="7"]{border-right:none}
-  .pi tr.hb td.gap{border-left:none}
-  .pi .logo.left{left:6px;right:auto}
+  .pi tr.hb td[colspan="7"]{border-left:none}
+  .pi tr.hb td.gap{border-right:none}
+  .pi .logo.left{left:14px;right:auto}
   .pi tr.hb td.pl-txt{border-left:none}
   .pi tr.hb td.pl-logo-col{border-right:none}
   .pi tr.hb:first-child td{border-top:1px solid #000}
@@ -649,7 +649,7 @@ function buildPiWorkbook(data, ExcelJS){
   const F10={name:"Arial",size:10}, F10B={name:"Arial",size:10,bold:true}, F18B={name:"Arial",size:18,bold:true}, F9={name:"Arial",size:9};
   const F12B={name:"Calibri",size:12,bold:true}, F12BR={name:"Calibri",size:12,bold:true,color:{argb:"FFFF0000"}}, F12ABR={name:"Arial",size:12,bold:true,color:{argb:"FFFF0000"}};
   const CTR={horizontal:"center",vertical:"middle",wrapText:true}, LFT={horizontal:"left",vertical:"middle",wrapText:true}, RGT={horizontal:"right",vertical:"middle"};
-  try{ const logoId=wb.addImage({base64:LOGO_DATA_URI.split(",")[1], extension:"png"}); ws.addImage(logoId,{tl:{col:0,row:0}, ext:{width:110,height:103}}); }catch(e){ console.warn("logo skipped", e); }
+  try{ const logoId=wb.addImage({base64:LOGO_DATA_URI.split(",")[1], extension:"png"}); ws.addImage(logoId,{tl:{col:0,row:0}, ext:{width:100,height:94}}); }catch(e){ console.warn("logo skipped", e); }
   function merge(rng,val,font,align,border){ws.mergeCells(rng);const c=ws.getCell(rng.split(":")[0]);c.value=val;c.font=font;c.alignment=align;c.border=border;}
   function put(cell,val,font,align,border,fmt){const c=ws.getCell(cell);c.value=val;c.font=font;c.alignment=align;c.border=border;if(fmt)c.numFmt=fmt;}
   const MONEY='"$"#,##0.00';
@@ -788,10 +788,10 @@ function render(){
     <tr class="hb"><td class="pl-logo-col"></td><td colspan="9" class="c pl-txt">EMAIL: ${esc(d.coEmail)} &nbsp;&nbsp; WEB: ${esc(d.coWeb)}</td></tr>
     <tr class="hb"><td class="pl-logo-col"></td><td colspan="9" class="c pl-txt">TEL:${esc(d.coTel)} &nbsp; FAX: ${esc(d.coFax)} &nbsp; CEL:${esc(d.coCel)}</td></tr>
     <tr class="hb"><td class="pl-logo-col"></td><td colspan="9" class="c pl-txt" style="font-size:11px">ADD: ${esc(d.coAddr)}</td></tr>`
-    : `<tr class="hb"><td colspan="7" class="h1">${esc(d.company)}</td><td colspan="1" class="gap"></td></tr>
-    <tr class="hb"><td colspan="7" class="c">EMAIL: ${esc(d.coEmail)} &nbsp;&nbsp; WEB: ${esc(d.coWeb)}</td><td colspan="1" class="gap"></td></tr>
-    <tr class="hb"><td colspan="7" class="c">TEL:${esc(d.coTel)} &nbsp; FAX: ${esc(d.coFax)} &nbsp; CEL:${esc(d.coCel)}</td><td colspan="1" class="gap"></td></tr>
-    <tr class="hb"><td colspan="7" class="c" style="font-size:11px">ADD: ${esc(d.coAddr)}</td><td colspan="1" class="gap"></td></tr>`;
+    : `<tr class="hb"><td colspan="1" class="gap"></td><td colspan="7" class="h1">${esc(d.company)}</td></tr>
+    <tr class="hb"><td colspan="1" class="gap"></td><td colspan="7" class="c">EMAIL: ${esc(d.coEmail)} &nbsp;&nbsp; WEB: ${esc(d.coWeb)}</td></tr>
+    <tr class="hb"><td colspan="1" class="gap"></td><td colspan="7" class="c">TEL:${esc(d.coTel)} &nbsp; FAX: ${esc(d.coFax)} &nbsp; CEL:${esc(d.coCel)}</td></tr>
+    <tr class="hb"><td colspan="1" class="gap"></td><td colspan="7" class="c" style="font-size:11px">ADD: ${esc(d.coAddr)}</td></tr>`;
   const span = isPL?10:8;
   const buyer = isPL
     ? `<tr><td>TO:</td><td colspan="6">${esc(d.to)}</td><td></td><td colspan="2">TEL: ${esc(d.tel)}</td></tr>
@@ -1216,8 +1216,8 @@ function downloadWord(){
       : (d.note?`<p>Note: ${esc(d.note)}</p>`:"");
   }
   const headTable = d.docType==="PL"
-    ? `<table border="0" cellspacing="0" cellpadding="0" width="100%"><tr><td width="120" valign="top"><img src="${LOGO_DATA_URI}" width="110"></td><td style="text-align:center"><h1 style="text-align:center;margin:0">${esc(d.company)}</h1><p style="text-align:center">EMAIL: ${esc(d.coEmail)} &nbsp; WEB: ${esc(d.coWeb)}<br>TEL:${esc(d.coTel)} &nbsp; FAX: ${esc(d.coFax)} &nbsp; CEL:${esc(d.coCel)}<br>ADD: ${esc(d.coAddr)}</p></td></tr></table>`
-    : `<table border="0" cellspacing="0" cellpadding="0" width="100%"><tr><td width="120" valign="top"><img src="${LOGO_DATA_URI}" width="110"></td><td style="text-align:center"><h1 style="text-align:center;margin:0">${esc(d.company)}</h1><p style="text-align:center">EMAIL: ${esc(d.coEmail)} &nbsp; WEB: ${esc(d.coWeb)}<br>TEL:${esc(d.coTel)} &nbsp; FAX: ${esc(d.coFax)} &nbsp; CEL:${esc(d.coCel)}<br>ADD: ${esc(d.coAddr)}</p></td></tr></table>`;
+    ? `<table border="0" cellspacing="0" cellpadding="0" width="100%"><tr><td width="120" valign="top"><img src="${LOGO_DATA_URI}" width="100"></td><td style="text-align:center"><h1 style="text-align:center;margin:0">${esc(d.company)}</h1><p style="text-align:center">EMAIL: ${esc(d.coEmail)} &nbsp; WEB: ${esc(d.coWeb)}<br>TEL:${esc(d.coTel)} &nbsp; FAX: ${esc(d.coFax)} &nbsp; CEL:${esc(d.coCel)}<br>ADD: ${esc(d.coAddr)}</p></td></tr></table>`
+    : `<table border="0" cellspacing="0" cellpadding="0" width="100%"><tr><td width="120" valign="top"><img src="${LOGO_DATA_URI}" width="100"></td><td style="text-align:center"><h1 style="text-align:center;margin:0">${esc(d.company)}</h1><p style="text-align:center">EMAIL: ${esc(d.coEmail)} &nbsp; WEB: ${esc(d.coWeb)}<br>TEL:${esc(d.coTel)} &nbsp; FAX: ${esc(d.coFax)} &nbsp; CEL:${esc(d.coCel)}<br>ADD: ${esc(d.coAddr)}</p></td></tr></table>`;
   const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${title}</title></head><body style="font-family:Arial">
   ${headTable}
   <h2 style="text-align:center">${title}</h2>
