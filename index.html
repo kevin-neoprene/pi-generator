@@ -31,13 +31,13 @@
   /* ---- PI preview, mimics the Excel sheet ---- */
   .pi{background:#fff;border:1px solid #999;padding:0;width:100%;font-size:12px}
   .pi{position:relative}
-  .pi .logo{position:absolute;left:48px;top:2px;width:100px;height:auto;z-index:2}
+  .pi .logo{position:absolute;left:75px;top:2px;width:100px;height:auto;z-index:2}
   .pi table{width:100%;border-collapse:collapse;table-layout:fixed}
-  .pi td,.pi th{border:1px solid #000;padding:5px 6px;vertical-align:middle;word-wrap:break-word}
+  .pi td,.pi th{border:1px solid #000;padding:8px 8px;vertical-align:middle;word-wrap:break-word}
   .pi tr.hb td{border-top:none;border-bottom:none}
   .pi tr.hb td[colspan="7"]{border-left:none}
   .pi tr.hb td.gap{border-right:none}
-  .pi .logo.left{left:48px;right:auto}
+  .pi .logo.left{left:75px;right:auto}
   .pi tr.hb td.pl-txt{border-left:none}
   .pi tr.hb td.pl-logo-col{border-right:none}
   .pi tr.hb:first-child td{border-top:1px solid #000}
@@ -87,13 +87,13 @@
       <button type="button" onclick="loadBlankQT()">空白报价单</button>
       <button type="button" onclick="resetForm()">清空新建</button>
     </div>
-    <details id="sec_hist" style="margin:10px 0">
+    <details id="sec_hist" style="margin:10px 0" open>
       <summary style="cursor:pointer;font-weight:bold">历史记录（已保存的 PI / CI / PL / 报价单，点击查看）</summary>
       <div style="margin-top:8px">
         <input id="hist_q" placeholder="搜客人 / 编号 / 类型…" oninput="renderHistory()" style="width:220px">
         <button type="button" onclick="saveToHistory(true)">保存当前到历史</button>
         <button type="button" onclick="clearHistory()">清空历史</button>
-        <span style="color:#666;font-size:12px">下载 Excel / Word / 打印时会自动保存到这里（只保存在这台电脑的浏览器里）。</span>
+        <span style="color:#666;font-size:12px">下载 Excel / Word / 打印时会自动保存到这里（只保存在这台电脑的浏览器里）。点“载入 / 编辑”可打开修改，改完再点“保存”即可更新。</span>
       </div>
       <div id="hist_list" style="margin-top:8px"></div>
     </details>
@@ -193,6 +193,7 @@
       <button type="button" class="btn primary" onclick="downloadExcel()">⬇ 下载 Excel (.xlsx)</button>
       <button type="button" class="btn green" onclick="printDoc()">🖨 打印 / 保存 PDF</button>
       <button type="button" class="btn dark" onclick="downloadWord()">⬇ 下载 Word (.doc)</button>
+      <button type="button" class="btn" style="background:#7c3aed;color:#fff" onclick="saveToHistory(true)">💾 保存</button>
     </div>
     <p class="note" style="margin-top:12px">PDF：点上面按钮，在打印对话框里选“另存为 PDF”、横向 A4 即可。Excel 里带公式，打开后改数量单价合计会自动重算。Word 版是 .doc，用 Word / WPS 打开都行。</p>
   </div>
@@ -681,7 +682,7 @@ function buildPiWorkbook(data, ExcelJS){
     const hL={left:med,right:thin,top:thin,bottom:thin}, hM={left:thin,right:thin,top:thin,bottom:thin}, hR={left:thin,right:med,top:thin,bottom:thin};
     [["A12","Item",hL],["B12","HS CODE",hM],["C12","QTY/CTN\n(PCS)",hM],["D12","N.W./CTN\n(KGS)",hM],["E12","G.W./CTN\n(KGS)",hM],["F12","CARTON SIZE\n(CM)",hM],["G12","CARTONS",hM],["H12","TOTAL QTY\n(PCS)",hM],["I12","TOTAL WEIGHT\n(KG)",hM],["J12","VOLUME\n(M3)",hR]].forEach(([c,v,b])=>put(c,v,F11B,CTR,b));
     row=13; const first=row;
-    data.products.forEach(p=>{ws.getRow(row).height=45;
+    data.products.forEach(p=>{ws.getRow(row).height=Math.max(45,Math.ceil(String(p.desc||"").length/16)*18);
       const d=parseDims(p.dims);
       const volF=d?((d.l/100)+"*"+(d.w/100)+"*"+(d.h/100)+"*G"+row):null;
       put("A"+row,p.desc,F11,CTR,{left:med,right:thin,top:thin,bottom:thin}); put("B"+row,p.hs,F11,CTR,all); put("C"+row,+p.qty||0,F11,CTR,all,"#,##0");
@@ -720,10 +721,10 @@ function buildPiWorkbook(data, ExcelJS){
       ws.getRow(10).height=18; put("B10","FM:",F10,{vertical:"middle"},{left:thin,top:thin}); merge("C10:G10",data.company,F10,LFT,top); merge("H10:I10","REF NO.:"+data.ref,F10,LFT,top);
       ws.getRow(11).height=18; put("B11","ATTN:",F10,{vertical:"middle"},{left:thin,bottom:thin}); merge("C11:G11",data.fmAttn,F10,LFT,bot); merge("H11:I11","DATE:"+dateStr(data.date),F10,LFT,bot);
     }
-    ws.getRow(12).height=30;
+    ws.getRow(12).height=45;
     row=13; const first=row;
     [["B12",dt==="QT"?"No.":"P/N"],["C12","PRODUCT DESCRIPTION"],["D12","Thickness(MM)"],["E12","HS CODE"],["F12","QUANTITY\n(PCS)"],["G12","UNIT PRICE\n("+data.unit+")"],["H12","Sample Cost(USD)"],["I12","TOTAL AMOUNT(USD)"]].forEach(([c,v])=>put(c,v,F10B,CTR,all));
-    data.products.forEach((p,idx)=>{ws.getRow(row).height=45;
+    data.products.forEach((p,idx)=>{ws.getRow(row).height=Math.max(45,Math.ceil(String(p.desc||"").length/16)*18);
       put("B"+row,dt==="QT"?idx+1:"/",F10,CTR,all); put("C"+row,p.desc,F10,LFT,all); put("D"+row,p.thick,F10,CTR,all); put("E"+row,p.hs,F10,CTR,all);
       put("F"+row,+p.qty||0,F10,CTR,all); put("G"+row,+p.unit||0,F10,CTR,all,MONEY); put("H"+row,+p.sample||0,F10,CTR,all,MONEY);
       put("I"+row,{formula:"(G"+row+"+H"+row+")*F"+row},F10,CTR,all,MONEY); row++;});
@@ -732,14 +733,14 @@ function buildPiWorkbook(data, ExcelJS){
       const subRow=row;
       ws.getRow(row).height=18; merge("B"+row+":H"+row,"SUB TOTAL",F10B,RGT,all); put("I"+row,{formula:"SUM(I"+first+":I"+lastP+")"},F10B,CTR,all,MONEY); row++;
       const exFirst=row;
-      (data.extras||[]).forEach(e=>{ws.getRow(row).height=18; merge("B"+row+":H"+row,e.label,F10,LFT,all); put("I"+row,+e.amount||0,F10,CTR,all,MONEY); row++;});
+      (data.extras||[]).forEach(e=>{ws.getRow(row).height=30; ["B","C","D","E"].forEach(c=>put(c+row,"",F10,LFT,all)); merge("F"+row+":H"+row,e.label,F10,RGT,all); put("I"+row,+e.amount||0,F10,CTR,all,MONEY); row++;});
       const exLast=row-1;
-      ws.getRow(row).height=18; merge("B"+row+":H"+row,"TOTAL",F10B,RGT,all);
+      ws.getRow(row).height=24; merge("B"+row+":H"+row,"TOTAL",F10B,RGT,all);
       put("I"+row,{formula:exLast>=exFirst?("I"+subRow+"+SUM(I"+exFirst+":I"+exLast+")"):("I"+subRow)},F10B,CTR,all,MONEY); row++;
     } else {
-      (data.extras||[]).forEach(e=>{ws.getRow(row).height=18; merge("B"+row+":H"+row,e.label,F10,LFT,all); put("I"+row,+e.amount||0,F10,CTR,all,MONEY); row++;});
+      (data.extras||[]).forEach(e=>{ws.getRow(row).height=30; ["B","C","D","E"].forEach(c=>put(c+row,"",F10,LFT,all)); merge("F"+row+":H"+row,e.label,F10,RGT,all); put("I"+row,+e.amount||0,F10,CTR,all,MONEY); row++;});
       const last=row-1;
-      ws.getRow(row).height=18; merge("B"+row+":H"+row,"TOTAL",F10B,RGT,all); put("I"+row,{formula:"SUM(I"+first+":I"+last+")"},F10B,CTR,all,MONEY); row++;
+      ws.getRow(row).height=24; merge("B"+row+":H"+row,"TOTAL",F10B,RGT,all); put("I"+row,{formula:"SUM(I"+first+":I"+last+")"},F10B,CTR,all,MONEY); row++;
     }
   }
   if(dt==="PI"){
@@ -826,10 +827,10 @@ function render(){
     if(isQT){
       const subTotal=d.products.reduce((s,p)=>s+((+p.unit||0)+(+p.sample||0))*(+p.qty||0),0);
       bodyRows+=`<tr><td colspan="7" class="r b">SUB TOTAL</td><td class="c b">${money(subTotal)}</td></tr>`
-        + d.extras.map(e=>`<tr><td colspan="7">${esc(e.label)}</td><td class="c">${money(e.amount)}</td></tr>`).join("");
+        + d.extras.map(e=>`<tr><td colspan="7" class="r">${esc(e.label)}</td><td class="c">${money(e.amount)}</td></tr>`).join("");
       totalRow=`<tr><td colspan="7" class="r b">TOTAL</td><td class="c b">${money(total)}</td></tr>`;
     } else {
-      bodyRows+=d.extras.map(e=>`<tr><td colspan="7">${esc(e.label)}</td><td class="c">${money(e.amount)}</td></tr>`).join("");
+      bodyRows+=d.extras.map(e=>`<tr><td colspan="7" class="r">${esc(e.label)}</td><td class="c">${money(e.amount)}</td></tr>`).join("");
       totalRow=`<tr><td colspan="7" class="r b">TOTAL</td><td class="c b">${money(total)}</td></tr>`;
     }
   }
@@ -1129,7 +1130,7 @@ function renderHistory(){
   const q=((document.getElementById("hist_q")||{}).value||"").toLowerCase();
   const list=loadHistory().filter(r=>!q||((r.docType+" "+r.to+" "+r.ref+" "+r.date+" "+r.totalText).toLowerCase().indexOf(q)>=0));
   if(!list.length){box.innerHTML='<p style="color:#666">暂无历史记录。下载 Excel / Word 或打印后会自动保存到这里。</p>';return;}
-  box.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px"><tr><th style="text-align:left">类型</th><th style="text-align:left">客人</th><th style="text-align:left">编号</th><th style="text-align:left">日期</th><th style="text-align:left">合计</th><th style="text-align:left">保存时间</th><th></th></tr>'+list.map(r=>'<tr><td>'+esc(r.docType)+'</td><td>'+(esc(r.to)||"-")+'</td><td>'+(esc(r.ref)||"-")+'</td><td>'+(esc(r.date)||"-")+'</td><td>'+esc(r.totalText)+'</td><td>'+esc(new Date(r.savedAt).toLocaleString("zh-CN",{hour12:false}))+'</td><td style="white-space:nowrap"><button type="button" onclick="loadHistoryItem(\''+r.id+'\')">载入</button> <button type="button" onclick="deleteHistoryItem(\''+r.id+'\')">删除</button></td></tr>').join("")+'</table>';
+  box.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px"><tr><th style="text-align:left">类型</th><th style="text-align:left">客人</th><th style="text-align:left">编号</th><th style="text-align:left">日期</th><th style="text-align:left">合计</th><th style="text-align:left">保存时间</th><th></th></tr>'+list.map(r=>'<tr><td>'+esc(r.docType)+'</td><td>'+(esc(r.to)||"-")+'</td><td>'+(esc(r.ref)||"-")+'</td><td>'+(esc(r.date)||"-")+'</td><td>'+esc(r.totalText)+'</td><td>'+esc(new Date(r.savedAt).toLocaleString("zh-CN",{hour12:false}))+'</td><td style="white-space:nowrap"><button type="button" onclick="loadHistoryItem(\''+r.id+'\')">载入 / 编辑</button> <button type="button" onclick="deleteHistoryItem(\''+r.id+'\')">删除</button></td></tr>').join("")+'</table>';
 }
 function loadHistoryItem(id){const rec=loadHistory().find(r=>r.id===id);if(!rec)return;fillForm(rec.data);window.scrollTo({top:0,behavior:"smooth"});}
 function deleteHistoryItem(id){saveHistory(loadHistory().filter(r=>r.id!==id));renderHistory();}
@@ -1192,17 +1193,17 @@ function downloadWord(){
   if(d.docType==="PL"){
     const rows=d.products.map(p=>{const dv=parseDims(p.dims);const vol=dv?dv.l*dv.w*dv.h/1000000*(+p.cartons||0):0;
       return `<tr><td>${esc(p.desc)}</td><td>${esc(p.hs)}</td><td>${p.qty}</td><td>${p.nw?p.nw.toFixed(1):""}</td><td>${p.gw?p.gw.toFixed(1):""}</td><td>${esc(p.dims)}</td><td>${p.cartons||""}</td><td>${(p.qty*(+p.cartons||0)).toLocaleString("en-US")}</td><td>${(p.gw*(+p.cartons||0)).toFixed(1)}</td><td>${vol.toFixed(3)}</td></tr>`;}).join("");
-    table=`<table border="1" cellspacing="0" cellpadding="5"><tr><th>Item</th><th>HS CODE</th><th>QTY/CTN (PCS)</th><th>N.W./CTN (KGS)</th><th>G.W./CTN (KGS)</th><th>CARTON SIZE (CM)</th><th>CARTONS</th><th>TOTAL QTY (PCS)</th><th>TOTAL WEIGHT (KG)</th><th>VOLUME (M3)</th></tr>${rows}<tr><td colspan="6" align="right"><b>TOTAL</b></td><td><b>${pk.ctn}</b></td><td><b>${pk.qty.toLocaleString("en-US")}</b></td><td><b>${pk.gw.toFixed(1)}</b></td><td><b>${pk.vol.toFixed(3)}</b></td></tr></table>`;
+    table=`<table border="1" cellspacing="0" cellpadding="8"><tr><th>Item</th><th>HS CODE</th><th>QTY/CTN (PCS)</th><th>N.W./CTN (KGS)</th><th>G.W./CTN (KGS)</th><th>CARTON SIZE (CM)</th><th>CARTONS</th><th>TOTAL QTY (PCS)</th><th>TOTAL WEIGHT (KG)</th><th>VOLUME (M3)</th></tr>${rows}<tr><td colspan="6" align="right"><b>TOTAL</b></td><td><b>${pk.ctn}</b></td><td><b>${pk.qty.toLocaleString("en-US")}</b></td><td><b>${pk.gw.toFixed(1)}</b></td><td><b>${pk.vol.toFixed(3)}</b></td></tr></table>`;
     foot=d.note?`<p>Note: ${esc(d.note)}</p>`:"";
   } else {
     const isQT=d.docType==="QT";
     const rows=d.products.map((p,idx)=>`<tr><td>${isQT?idx+1:"/"}</td><td>${esc(p.desc)}</td><td>${esc(p.thick)}</td><td>${esc(p.hs)}</td><td>${p.qty}</td><td>${money(p.unit)}</td><td>${money(p.sample)}</td><td>${money((p.unit+p.sample)*p.qty)}</td></tr>`).join("");
-    const ex=d.extras.map(e=>`<tr><td colspan="7">${esc(e.label)}</td><td>${money(e.amount)}</td></tr>`).join("");
+    const ex=d.extras.map(e=>`<tr><td colspan="7" align="right">${esc(e.label)}</td><td>${money(e.amount)}</td></tr>`).join("");
     const subTotal=d.products.reduce((s,p)=>s+((+p.unit||0)+(+p.sample||0))*(+p.qty||0),0);
     const totRow=isQT
       ? `<tr><td colspan="7" align="right"><b>SUB TOTAL</b></td><td><b>${money(subTotal)}</b></td></tr>${ex}<tr><td colspan="7" align="right"><b>TOTAL</b></td><td><b>${money(total)}</b></td></tr>`
       : `${ex}<tr><td colspan="7" align="right"><b>TOTAL</b></td><td><b>${money(total)}</b></td></tr>`;
-    table=`<table border="1" cellspacing="0" cellpadding="5"><tr><th>${isQT?"No.":"P/N"}</th><th>PRODUCT DESCRIPTION</th><th>Thickness(MM)</th><th>HS CODE</th><th>QUANTITY(PCS)</th><th>UNIT PRICE(${esc(d.unit)})</th><th>Sample Cost(USD)</th><th>TOTAL AMOUNT(USD)</th></tr>${rows}${totRow}</table>`;
+    table=`<table border="1" cellspacing="0" cellpadding="8"><tr><th>${isQT?"No.":"P/N"}</th><th>PRODUCT DESCRIPTION</th><th>Thickness(MM)</th><th>HS CODE</th><th>QUANTITY(PCS)</th><th>UNIT PRICE(${esc(d.unit)})</th><th>Sample Cost(USD)</th><th>TOTAL AMOUNT(USD)</th></tr>${rows}${totRow}</table>`;
     foot = d.docType==="PI"
       ? `<p style="color:red"><b>REMARKS: ${esc(d.remarks)}</b></p>
   <p><b>1. THE ABOVE PRICE IS ${esc(d.term)} PRICE.<br>2. LEAD TIME: ${esc(d.lead)}<br>3. PAYMENT: ${esc(d.pay)}<br>4. MADE IN CHINA.</b></p>
@@ -1216,8 +1217,8 @@ function downloadWord(){
       : (d.note?`<p>Note: ${esc(d.note)}</p>`:"");
   }
   const headTable = d.docType==="PL"
-    ? `<table border="0" cellspacing="0" cellpadding="0" width="100%"><tr><td width="150" valign="top" style="padding-left:30px"><img src="${LOGO_DATA_URI}" width="100"></td><td style="text-align:center"><h1 style="text-align:center;margin:0">${esc(d.company)}</h1><p style="text-align:center">EMAIL: ${esc(d.coEmail)} &nbsp; WEB: ${esc(d.coWeb)}<br>TEL:${esc(d.coTel)} &nbsp; FAX: ${esc(d.coFax)} &nbsp; CEL:${esc(d.coCel)}<br>ADD: ${esc(d.coAddr)}</p></td></tr></table>`
-    : `<table border="0" cellspacing="0" cellpadding="0" width="100%"><tr><td width="150" valign="top" style="padding-left:30px"><img src="${LOGO_DATA_URI}" width="100"></td><td style="text-align:center"><h1 style="text-align:center;margin:0">${esc(d.company)}</h1><p style="text-align:center">EMAIL: ${esc(d.coEmail)} &nbsp; WEB: ${esc(d.coWeb)}<br>TEL:${esc(d.coTel)} &nbsp; FAX: ${esc(d.coFax)} &nbsp; CEL:${esc(d.coCel)}<br>ADD: ${esc(d.coAddr)}</p></td></tr></table>`;
+    ? `<table border="0" cellspacing="0" cellpadding="0" width="100%"><tr><td width="150" valign="top" style="padding-left:45px"><img src="${LOGO_DATA_URI}" width="100"></td><td style="text-align:center"><h1 style="text-align:center;margin:0">${esc(d.company)}</h1><p style="text-align:center">EMAIL: ${esc(d.coEmail)} &nbsp; WEB: ${esc(d.coWeb)}<br>TEL:${esc(d.coTel)} &nbsp; FAX: ${esc(d.coFax)} &nbsp; CEL:${esc(d.coCel)}<br>ADD: ${esc(d.coAddr)}</p></td></tr></table>`
+    : `<table border="0" cellspacing="0" cellpadding="0" width="100%"><tr><td width="150" valign="top" style="padding-left:45px"><img src="${LOGO_DATA_URI}" width="100"></td><td style="text-align:center"><h1 style="text-align:center;margin:0">${esc(d.company)}</h1><p style="text-align:center">EMAIL: ${esc(d.coEmail)} &nbsp; WEB: ${esc(d.coWeb)}<br>TEL:${esc(d.coTel)} &nbsp; FAX: ${esc(d.coFax)} &nbsp; CEL:${esc(d.coCel)}<br>ADD: ${esc(d.coAddr)}</p></td></tr></table>`;
   const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${title}</title></head><body style="font-family:Arial">
   ${headTable}
   <h2 style="text-align:center">${title}</h2>
