@@ -34,6 +34,7 @@
   .pi .logo{position:absolute;left:75px;top:2px;width:100px;height:auto;z-index:2}
   .pi table{width:100%;border-collapse:collapse;table-layout:fixed}
   .pi td,.pi th{border:1px solid #000;padding:8px 8px;vertical-align:middle;word-wrap:break-word}
+  .pi tr.prod td{padding-top:15px;padding-bottom:15px}
   .pi tr.hb td{border-top:none;border-bottom:none}
   .pi tr.hb td[colspan="7"]{border-left:none}
   .pi tr.hb td.gap{border-right:none}
@@ -818,12 +819,12 @@ function render(){
   if(isPL){
     head=`<tr><th>Item</th><th>HS CODE</th><th>QTY/CTN (PCS)</th><th>N.W./CTN (KGS)</th><th>G.W./CTN (KGS)</th><th>CARTON SIZE (CM)</th><th>CARTONS</th><th>TOTAL QTY (PCS)</th><th>TOTAL WEIGHT (KG)</th><th>VOLUME (M3)</th></tr>`;
     bodyRows=d.products.map(p=>{const dv=parseDims(p.dims);const vol=dv?dv.l*dv.w*dv.h/1000000*(+p.cartons||0):0;
-      return `<tr><td class="c">${esc(p.desc)}</td><td class="c">${esc(p.hs)}</td><td class="c">${p.qty}</td><td class="c">${p.nw?p.nw.toFixed(1):""}</td><td class="c">${p.gw?p.gw.toFixed(1):""}</td><td class="c">${esc(p.dims)}</td><td class="c">${p.cartons||""}</td><td class="c">${(p.qty*(+p.cartons||0)).toLocaleString("en-US")}</td><td class="c">${(p.gw*(+p.cartons||0)).toFixed(1)}</td><td class="c">${vol.toFixed(3)}</td></tr>`;}).join("");
+      return `<tr class="prod"><td class="c">${esc(p.desc)}</td><td class="c">${esc(p.hs)}</td><td class="c">${p.qty}</td><td class="c">${p.nw?p.nw.toFixed(1):""}</td><td class="c">${p.gw?p.gw.toFixed(1):""}</td><td class="c">${esc(p.dims)}</td><td class="c">${p.cartons||""}</td><td class="c">${(p.qty*(+p.cartons||0)).toLocaleString("en-US")}</td><td class="c">${(p.gw*(+p.cartons||0)).toFixed(1)}</td><td class="c">${vol.toFixed(3)}</td></tr>`;}).join("");
     totalRow=`<tr><td colspan="6" class="r b">TOTAL</td><td class="c b">${pk.ctn}</td><td class="c b">${pk.qty.toLocaleString("en-US")}</td><td class="c b">${pk.gw.toFixed(1)}</td><td class="c b">${pk.vol.toFixed(3)}</td></tr>`;
     tail=`<tr><td colspan="10">&nbsp;</td></tr>`;
   } else {
     head=`<tr><th>${isQT?"No.":"P/N"}</th><th>PRODUCT DESCRIPTION</th><th>Thickness(MM)</th><th>HS CODE</th><th>QUANTITY(PCS)</th><th>UNIT PRICE(${esc(d.unit)})</th><th>Sample Cost(USD)</th><th>TOTAL AMOUNT(USD)</th></tr>`;
-    bodyRows=d.products.map((p,idx)=>`<tr><td class="c">${isQT?idx+1:"/"}</td><td>${esc(p.desc)}</td><td class="c">${esc(p.thick)}</td><td class="c">${esc(p.hs)}</td><td class="c">${p.qty}</td><td class="c">${money(p.unit)}</td><td class="c">${money(p.sample)}</td><td class="c">${money((p.unit+p.sample)*p.qty)}</td></tr>`).join("");
+    bodyRows=d.products.map((p,idx)=>`<tr class="prod"><td class="c">${isQT?idx+1:"/"}</td><td>${esc(p.desc)}</td><td class="c">${esc(p.thick)}</td><td class="c">${esc(p.hs)}</td><td class="c">${p.qty}</td><td class="c">${money(p.unit)}</td><td class="c">${money(p.sample)}</td><td class="c">${money((p.unit+p.sample)*p.qty)}</td></tr>`).join("");
     if(isQT){
       const subTotal=d.products.reduce((s,p)=>s+((+p.unit||0)+(+p.sample||0))*(+p.qty||0),0);
       bodyRows+=`<tr><td colspan="7" class="r b">SUB TOTAL</td><td class="c b">${money(subTotal)}</td></tr>`
@@ -855,7 +856,7 @@ function render(){
     <tr><td colspan="${span}">Confirmed by (Tianchi): ______________________ &nbsp;&nbsp; Date: ____________</td></tr>
     <tr><td colspan="${span}">Accepted by (Customer): ______________________ &nbsp;&nbsp; Date: ____________</td></tr>`
     : (d.note?`<tr><td colspan="${span}">Note: ${esc(d.note)}</td></tr>`:"");
-  document.getElementById("pi_preview").innerHTML=`<img class="logo${isPL?" left":""}" src="${LOGO_DATA_URI}" alt="Tianchi Logo"><table>
+  document.getElementById("pi_preview").innerHTML=`<img class="logo${isPL?" left":""}" src="${LOGO_DATA_URI}" alt="Tianchi Logo"><table>${isPL?"<colgroup><col style=\"width:18.9%\"><col style=\"width:13.0%\"><col style=\"width:8.4%\"><col style=\"width:6.2%\"><col style=\"width:6.0%\"><col style=\"width:10.6%\"><col style=\"width:5.1%\"><col style=\"width:9.9%\"><col style=\"width:8.2%\"><col style=\"width:13.7%\"></colgroup>":"<colgroup><col style=\"width:9.5%\"><col style=\"width:18.7%\"><col style=\"width:9.8%\"><col style=\"width:14.2%\"><col style=\"width:10.7%\"><col style=\"width:8.6%\"><col style=\"width:11.2%\"><col style=\"width:17.3%\"></colgroup>"}
     ${hb}
     <tr class="hb"><td colspan="${span}" class="h2t">${title}</td></tr>
     ${buyer}
